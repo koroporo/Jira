@@ -1,0 +1,12 @@
+# IntelliJ
+.idea/
+*.iml
+out/
+gen/
+
+# VS Code
+.vscode/
+
+# Database & Environment
+.env
+*.db
