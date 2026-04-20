@@ -8,6 +8,7 @@
 Open your terminal/PowerShell in the project root and run:
 ```bash
 docker-compose up -d
+```
 
 ### 3. SQL Script Structure (Part 1 & 2)
 [cite_start]Scripts must be executed in the following order to handle foreign key dependencies and satisfy assignment requirements[cite: 8, 35]:
