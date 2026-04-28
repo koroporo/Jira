@@ -10,19 +10,21 @@ CREATE TABLE IF NOT EXISTS Task (
     DueDate TIMESTAMP DEFAULT NULL,
     CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdateTime TIMESTAMP DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    
     ParentTaskID INT DEFAULT NULL,
-    StatusID INT DEFAULT NULL,
+    StatusID INT DEFAULT NULL, 
     MilestoneID INT DEFAULT NULL,
     ReporterID INT,
     AssigneeID INT DEFAULT NULL,
-    BoardID INT,
-
+    ProjectID INT NOT NULL,
+    
+    
     FOREIGN KEY(ParentTaskID) REFERENCES Task(TaskID) ON UPDATE CASCADE ON DELETE CASCADE,  -- trigger to check the level of the task, if parent task is epic, then the child task can be story or bug, if parent task is story, then the child task can only be subtask, if parent task is bug, then it cannot have child task
-    FOREIGN KEY(StatusID) REFERENCES TaskStatus(StatusID) ON UPDATE CASCADE, -- trigger to check the status transition, only allow valid status transition based on the workflow design
-    FOREIGN KEY(MileStoneID) REFERENCES Milestone(MilestoneID) ON UPDATE CASCADE, -- trigger to check the status of the milestone, if the milestone is closed, then all the task under this milestone should be closed as well
+    FOREIGN KEY(StatusID) REFERENCES TaskStatus(StatusID) ON UPDATE CASCADE ON DELETE CASCADE, -- trigger to check the status transition, only allow valid status transition based on the workflow design, when deleting a status, reassign to NULL
+    FOREIGN KEY(MileStoneID) REFERENCES Milestone(MilestoneID) ON UPDATE CASCADE ON DELETE CASCADE, -- trigger to check the status of the milestone, if the milestone is closed, then all the task under this milestone should be closed as well
     FOREIGN KEY(ReporterID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE, -- trigger to check the account status of the reporter, if the account is deactivated, then the reporter cannot report a task
     FOREIGN KEY(AssigneeID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE, -- trigger to check the account status of the assignee, if the account is deactivated, then the assignee cannot be assigned a task
-    FOREIGN KEY(BoardID) REFERENCES Board(BoardID) ON UPDATE CASCADE ON DELETE SET NULL -- trigger to check the board status, if the board is archived, then all the task under this board should be archived as well
+    FOREIGN KEY(ProjectID) REFERENCES Project(ProjectID) ON UPDATE CASCADE ON DELETE CASCADE -- trigger to check the project status, if the project is deactivated, then all the task under this project should be deactivated as well
 );
 
 CREATE TABLE IF NOT EXISTS Story (
@@ -60,7 +62,7 @@ CREATE TABLE IF NOT EXISTS LinkedItem (
 CREATE TABLE IF NOT EXISTS Milestone(
     MilestoneID INT AUTO_INCREMENT PRIMARY KEY,
     MilestoneName VARCHAR(50)  -- Semantic Defaulting
-    MilestoneStatus VARCHAR(15), -- Semantic Status.
+    MilestoneStatus BOOLEAN DEFAULT FALSE, -- Semantic Status.
     MilestoneGoal VARCHAR(255),
     StartDate DATE DEFAULT NULL,
     EndDate DATE DEFAULT NULL
@@ -80,22 +82,17 @@ CREATE TABLE IF NOT EXISTS UserProfile (
     FOREIGN KEY (UserID) REFERENCES UserAccount(UserID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS Organization(
-    OrgID INT AUTO_INCREMENT PRIMARY KEY,
-    OrgName VARCHAR(50),
-    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    OrgDescription VARCHAR(255),
-    ProfileID INT DEFAULT NULL,
-    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE ON DELETE SET NULL
-);
-
 " organization if not doing business like jira plus or pro or businees so it must be
 replaced by USERPROFILE because the organization is not the main entity in our system, and also it is not necessary to have organization to use our system, 
 so we can remove the organization table and replace it with user profile, 
 and also we can add a field in user profile to indicate whether the user is an admin or not, so that we can manage the permissions of the user based on this field
 
 --> solution = use directly user profile as ORGANAZATION AND ALSO ADD A FIELD IN USER PROFILE TO INDICATE WHETHER THE USER IS AN ADMIN OR NOT, SO THAT WE CAN MANAGE THE PERMISSIONS OF THE USER BASED ON THIS FIELD
+
+Sum: Fack Organization
 "
+
+
 CREATE TABLE IF NOT EXISTS UserAccount (
     UserID INT PRIMARY KEY,
     Email VARCHAR(255) NOT NULL UNIQUE,
@@ -113,19 +110,20 @@ CREATE TABLE IF NOT EXISTS PhoneNumber(
 );
 
 
-
-CREATE TABLE IF NOT EXISTS Workflow (
-    WorkflowID INT AUTO_INCREMENT PRIMARY KEY,
-    WorkflowName VARCHAR(255) NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS TaskStatus (
-    StatusID INT AUTO_INCREMENT INT PRIMARY KEY,
+    StatusID INT AUTO_INCREMENT PRIMARY KEY,
     StatusName VARCHAR(50) NOT NULL,
-    WorkflowID INT NOT NULL,
-    -- STATUS CATEGORY
-    -- DISPLAY ORDER 
-    FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID) ON UPDATE CASCADE
+    StatusColor VARCHAR(15) NOT NULL,
+);
+CREATE TABLE IF NOT EXISTS Transition (
+    TransitionID INT AUTO_INCREMENT PRIMARY KEY,
+    FromStatusID INT NOT NULL,
+    StatusToID INT NOT NULL,
+    ProjectID INT NOT NULL,
+
+    FOREIGN KEY (FromStatusID) REFERENCES TaskStatus(StatusID) ON UPDATE CASCADE ON DELETE CASCADE, -- trigger to check the status transition, only allow valid status transition based on the workflow design, when deleting a status, delete all the transition related to this status
+    FOREIGN KEY (StatusToID) REFERENCES TaskStatus(StatusID) ON UPDATE CASCADE ON DELETE CASCADE, -- trigger to check the status transition, only allow valid status transition based on the workflow design, when deleting a status, delete all the transition related to this status
+    FOREIGN KEY (ProjectID) REFERENCES Project(ProjectID) ON UPDATE CASCADE ON DELETE CASCADE -- trigger to check the project status, if the project is deactivated, then all the transition under this project should be deactivated as well
 );
 
 CREATE TABLE IF NOT EXISTS Project (
@@ -136,24 +134,9 @@ CREATE TABLE IF NOT EXISTS Project (
     ProjectStatus VARCHAR(20) NOT NULL,
     CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FinishedTime TIMESTAMP DEFAULT NULL,
-    OrgID INT, -- trigger
-    WorkflowID INT NOT NULL,
-    FOREIGN KEY (OrgID) REFERENCES Organization(OrgID) ON UPDATE CASCADE ON DELETE SET NULL, --trigger to check the organization status, if the organization is deactivated, then the project under this organization should be deactivated as well
-    FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID) ON UPDATE CASCADE 
 ); 
 
------- stopp there to check actor
-CREATE TABLE IF NOT EXISTS Board (
-    BoardID INT AUTO_INCREMENT PRIMARY KEY,
-    BoardName VARCHAR(50) NOT NULL,
-    BoardType VARCHAR(50) NOT NULL,
-    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CreatorID INT NOT NULL, -- Trigger 
-    ProjectID INT NOT NULL,
 
-    FOREIGN KEY (CreatorID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE,
-    FOREIGN KEY (ProjectID) REFERENCES Project(ProjectID) ON UPDATE CASCADE ON DELETE SET NULL
-);
 
 CREATE TABLE IF NOT EXISTS Notify(
     NotificationID INT AUTO_INCREMENT PRIMARY KEY,
@@ -169,7 +152,9 @@ CREATE TABLE IF NOT EXISTS Notify(
 CREATE TABLE IF NOT EXISTS Comment (
     CommentID INT AUTO_INCREMENT PRIMARY KEY,
     CommentContent VARCHAR(255) NOT NULL,
-    -- CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    isDeleted BOOLEAN DEFAULT FALSE, -- trigger to check the account status of the user, if the account is deactivated, then the user cannot delete a comment, but can only mark the comment as deleted
+    DeletedTime TIMESTAMP DEFAULT NULL, 
     
     AuthorID INT NOT NULL,
     TaskID INT NOT NULL,
@@ -190,7 +175,6 @@ CREATE TABLE IF NOT EXISTS  NotificationReceive(
 
 CREATE TABLE IF NOT EXISTS Permission (
     PermissionID INT AUTO_INCREMENT PRIMARY KEY,
-    ResourceType VARCHAR(25) NOT NULL,
     ActionCode VARCHAR(25) NOT NULL,
     Scope VARCHAR(25) NOT NULL
 );
@@ -198,8 +182,9 @@ CREATE TABLE IF NOT EXISTS Permission (
 CREATE TABLE IF NOT EXISTS ProjectRole (
     RoleID INT AUTO_INCREMENT PRIMARY KEY,
     RoleDescription VARCHAR(255) NOT NULL,
-    RoleName VARCHAR(50) NOT NULL
+    RoleName VARCHAR(50) NOT NULL,
     OrgID INT NOT NULL,
+    Scope VARCHAR(25) NOT NULL, -- trigger to check the scope of the role, if the scope is project, then the role only has permission to perform action within the project, if the scope is organization, then the role has permission to perform action across the organization
     FOREIGN KEY (OrgID) REFERENCES Organization(OrgID) -- change later after org change to user profiel
 );
 
@@ -217,6 +202,10 @@ CREATE TABLE IF NOT EXISTS ProjectRoleActor (
     RoleID INT NOT NULL,
     ProfileID INT NOT NULL,
     Roleid INT NOT NULL,
+    
+    ActorState VARCHAR(20) NOT NULL, -- trigger to check the state of the actor - (INVITED, ACTIVE, INACTIVE), only allow the user with ACTIVE state can perform action based on the role
+    ActorDate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- trigger if the ActorState is INVITED, then the ActorDate is the invitation date, if the ActorState is ACTIVE, then the ActorDate is the activation date, if the ActorState is INACTIVE, then the ActorDate is the deactivation date
+
     FOREIGN KEY (RoleID) REFERENCES ProjectRole(RoleID) ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE ON DELETE CASCADE
 );
