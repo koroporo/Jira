@@ -9,7 +9,7 @@ CREATE DATABASE db;
 USE db;
 
 CREATE TABLE IF NOT EXISTS UserAccount (
-    UserID INT PRIMARY KEY,
+    UserID INT AUTO_INCREMENT PRIMARY KEY,
     Email VARCHAR(255) NOT NULL UNIQUE,
     PasswordHash VARCHAR(255) NOT NULL, -- SYSTEM trigger
     Username VARCHAR(50) NOT NULL UNIQUE
@@ -47,11 +47,11 @@ CREATE TABLE IF NOT EXISTS Organization(
 );
 CREATE TABLE IF NOT EXISTS PhoneNumber(
     ProfileID INT NOT NULL,
-    PhoneNumber CHAR(10) NOT NULL UNIQUE,
+    PhoneNumber CHAR(10) NOT NULL,
     PRIMARY KEY (ProfileID, PhoneNumber),
     FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID)
         ON DELETE CASCADE
-        ON UPDATE CASCADE, -- feature
+        ON UPDATE CASCADE -- feature
 --     CHECK (PhoneNumber REGEXP '^[0-9]{10}$') check ở tầng application
 );
 
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS Project (
     WorkflowID INT NOT NULL,
     FOREIGN KEY (OrgID) REFERENCES Organization(OrgID)
         ON UPDATE CASCADE
-        ON DELETE SET NULL, --trigger to check the organization status, if the organization is deactivated, then the project under this organization should be deactivated as well
+        ON DELETE SET NULL, -- trigger to check the organization status, if the organization is deactivated, then the project under this organization should be deactivated as well
     FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID)
         ON UPDATE CASCADE
 );
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS Milestone(
     StartDate DATE DEFAULT NULL,
     EndDate DATE DEFAULT NULL
 );
------- stopp there to check actor
+-- ---- stopp there to check actor
 CREATE TABLE IF NOT EXISTS Board (
     BoardID INT AUTO_INCREMENT PRIMARY KEY,
     BoardName VARCHAR(50) NOT NULL,
@@ -99,11 +99,11 @@ CREATE TABLE IF NOT EXISTS Board (
         ON UPDATE CASCADE,
     FOREIGN KEY (ProjectID) REFERENCES Project(ProjectID)
         ON UPDATE CASCADE
-        ON DELETE SET NULL
+
 );
 
 CREATE TABLE IF NOT EXISTS TaskStatus (
-    StatusID INT AUTO_INCREMENT INT PRIMARY KEY,
+    StatusID INT AUTO_INCREMENT PRIMARY KEY,
     StatusName VARCHAR(50) NOT NULL,
     WorkflowID INT NOT NULL,
     -- STATUS CATEGORY
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS Story (
 CREATE TABLE IF NOT EXISTS Bug (
     TaskID INT,
     Severity INT NOT NULL,
-    FOREIGN KEY(TaskID) REFERENCES Task(TaskId)
+    FOREIGN KEY(TaskID) REFERENCES Task(TaskID)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
     PRIMARY KEY(TaskID)
@@ -171,13 +171,15 @@ CREATE TABLE IF NOT EXISTS Epic  (
 );
 
 CREATE TABLE IF NOT EXISTS LinkedItem (
+    LinkedItemID INT AUTO_INCREMENT,
     TaskID INT NOT NULL,
-    LinkedItem VARCHAR(2048) NOT NULL,
+    LinkedItem VARCHAR(2048) NOT NULL, -- kich thuoc qua lon không thể dùng làm index/primary key do vượt giới hạn bytes
 
     FOREIGN KEY(TaskID) REFERENCES Task(TaskID)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
-    PRIMARY KEY (TaskID, LinkedItem),
+    PRIMARY KEY (LinkedItemID),
+    UNIQUE (TaskID, LinkedItem(255))
 );
 
 CREATE TABLE IF NOT EXISTS Comment (
@@ -189,14 +191,14 @@ CREATE TABLE IF NOT EXISTS Comment (
     TaskID INT NOT NULL,
 
     FOREIGN KEY (AuthorID) REFERENCES UserProfile(ProfileID) ON DELETE CASCADE,
-    FOREIGN KEY (TaskID) REFERENCES Task(TaskID) ON DELETE CASCADE -- delete a task will delete all the comments under this task;
+    FOREIGN KEY (TaskID) REFERENCES Task(TaskID) ON DELETE CASCADE, -- delete a task will delete all the comments under this task;
     Check (CHAR_LENGTH(TRIM(CommentContent)) > 0)
 );
 
 CREATE TABLE IF NOT EXISTS Notification (
     NotificationID INT AUTO_INCREMENT PRIMARY KEY,
     NotiDescription VARCHAR(255) NOT NULL,
-    CommentID INT NOT NULL,
+    CommentID INT,
     TaskID INT NOT NULL,
 
     FOREIGN KEY (CommentID) REFERENCES Comment(CommentID)
@@ -205,7 +207,7 @@ CREATE TABLE IF NOT EXISTS Notification (
     FOREIGN KEY (TaskID) REFERENCES Task(TaskID)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
-    CHECK (CHAR_LENGTH(TRIM(Description)) > 0)
+    CHECK (CHAR_LENGTH(TRIM(NotiDescription)) > 0)
 );
 
 CREATE TABLE IF NOT EXISTS  NotificationReceive(
@@ -231,7 +233,7 @@ CREATE TABLE IF NOT EXISTS Permission (
 CREATE TABLE IF NOT EXISTS ProjectRole (
     RoleID INT AUTO_INCREMENT PRIMARY KEY,
     RoleDescription VARCHAR(255) NOT NULL,
-    RoleName VARCHAR(50) NOT NULL
+    RoleName VARCHAR(50) NOT NULL,
     OrgID INT NOT NULL,
     FOREIGN KEY (OrgID) REFERENCES Organization(OrgID) -- change later after org change to user profiel
 );
@@ -253,7 +255,6 @@ CREATE TABLE IF NOT EXISTS ProjectRoleActor (
     ProjectRoleActorID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     RoleID INT NOT NULL,
     ProfileID INT NOT NULL,
-    Roleid INT NOT NULL,
     FOREIGN KEY (RoleID) REFERENCES ProjectRole(RoleID)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
@@ -271,17 +272,16 @@ CREATE TABLE IF NOT EXISTS ActivityLog (
     ActionCode VARCHAR(50) NOT NULL, -- nên sửa
     Time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    ProfileID INT NOT NULL, ---> projecrt role actor
+    ProfileID INT NOT NULL, -- -> projecrt role actor
     -- activy = profileID + (projectroleactor + project role + permission)
     -- --> result = trigger check authority + log action
     
     TaskID INT NOT NULL,
     FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID)
-        ON UPDATE CASCADE ,
+        ON UPDATE CASCADE,
     FOREIGN KEY (TaskID) REFERENCES Task(TaskID)
         ON UPDATE CASCADE
 );
-
 -- " organization if not doing business like jira plus or pro or businees so it must be
 -- replaced by USERPROFILE because the organization is not the main entity in our system, and also it is not necessary to have organization to use our system,
 -- so we can remove the organization table and replace it with user profile,
@@ -289,49 +289,51 @@ CREATE TABLE IF NOT EXISTS ActivityLog (
 --
 -- --> solution = use directly user profile as ORGANAZATION AND ALSO ADD A FIELD IN USER PROFILE TO INDICATE WHETHER THE USER IS AN ADMIN OR NOT, SO THAT WE CAN MANAGE THE PERMISSIONS OF THE USER BASED ON THIS FIELD
 -- "
+--
+-- " TO DO AFTER...: Kiểm tra thứ tự tạo bảng (rất quan trọng)
+-- "
+-- "
+-- ✅ How to verify whether a user can perform an action
+-- ActivityLog itself should not be the authorization engine.
+-- It is an audit trail: it records what happened after your app allowed or denied the action.
+--
+-- Use permissions + roles for authorization
+-- Your schema already has the right pieces:
+--
+-- Permission stores allowed operations (ResourceType, ActionCode, Scope)
+-- ProjectRole defines a role
+-- RolePermission assigns permissions to roles
+-- ProjectRoleActor assigns roles to users
+-- Authorization flow
+-- User requests an action, e.g. Edit Task, Delete Comment
+-- Application checks:
+-- which role(s) the user has
+-- whether that role includes the needed permission
+-- c
+--
+-- SELECT 1
+-- FROM ProjectRoleActor pra
+-- JOIN RolePermission rp ON rp.RoleID = pra.RoleID
+-- JOIN Permission p ON p.PermissionID = rp.PermissionID
+-- WHERE pra.ProfileID = ?
+--   AND p.ResourceType = 'Task'
+--   AND p.ActionCode = 'Edit'
+-- LIMIT 1;
+-- "
+--
+-- "epic và milestone có thể coi là 1 loại task đặc biệt, có thể dùng chung bảng Task để lưu trữ thông tin chung,
+--  sau đó tạo bảng riêng để lưu trữ thông tin đặc thù của epic và milestone. nhung ma epic va
+--  task khong co khong co nhieu su khac biet nen co the gop chung vao 1 bang Task, va them truong Type de phan biet giua cac loai task
+--  epic khong co tac dung  chi de phan loai nen gop chung vao bang Task
+--
+--  one special thing of  epic is that it can have multi task but
+--  CANT NOT HAVE SUBEPIC itself so we can keep base on this reason"
+--
+-- "added countrycode in phone number to support phone number standardization, and also added timezone in user profile to support users from different regions"
+--
+-- "Status Catgory removed - cannot determined conceptually,
 
-" TO DO AFTER...: Kiểm tra thứ tự tạo bảng (rất quan trọng)
-"
-"
-✅ How to verify whether a user can perform an action
-ActivityLog itself should not be the authorization engine. 
-It is an audit trail: it records what happened after your app allowed or denied the action.
-
-Use permissions + roles for authorization
-Your schema already has the right pieces:
-
-Permission stores allowed operations (ResourceType, ActionCode, Scope)
-ProjectRole defines a role
-RolePermission assigns permissions to roles
-ProjectRoleActor assigns roles to users
-Authorization flow
-User requests an action, e.g. Edit Task, Delete Comment
-Application checks:
-which role(s) the user has
-whether that role includes the needed permission
-c
-
-SELECT 1
-FROM ProjectRoleActor pra
-JOIN RolePermission rp ON rp.RoleID = pra.RoleID
-JOIN Permission p ON p.PermissionID = rp.PermissionID
-WHERE pra.ProfileID = ? 
-  AND p.ResourceType = 'Task'
-  AND p.ActionCode = 'Edit'
-LIMIT 1;
-"
-
-"epic và milestone có thể coi là 1 loại task đặc biệt, có thể dùng chung bảng Task để lưu trữ thông tin chung,
- sau đó tạo bảng riêng để lưu trữ thông tin đặc thù của epic và milestone. nhung ma epic va
- task khong co khong co nhieu su khac biet nen co the gop chung vao 1 bang Task, va them truong Type de phan biet giua cac loai task
- epic khong co tac dung  chi de phan loai nen gop chung vao bang Task
- 
- one special thing of  epic is that it can have multi task but
- CANT NOT HAVE SUBEPIC itself so we can keep base on this reason"
-
-"added countrycode in phone number to support phone number standardization, and also added timezone in user profile to support users from different regions"
-
-"Status Catgory removed - cannot determined conceptually, and also can be determined by the workflow design, so it is redundant"
+-- and also can be determined by the workflow design, so it is redundant"
 
 -- %Status VARCHAR(15)
 -- Dùng string tự do → dễ lỗi dữ liệu (active, Active, ACTIVE…)
@@ -344,4 +346,3 @@ LIMIT 1;
 -- Option 2 (chuẩn hóa):
 --
 -- StatusID → bảng riêng
-" Hình như đang có 2 bảng PhoneNumber"
