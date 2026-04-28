@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS UserProfile (
     LastLoginTime TIMESTAMP, -- SYSTEM TRIGGER
     CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     Timezone VARCHAR(50) NOT NULL, 
-    AvatarURL VARCHAR(255), -- SYSTEM GENERATED
+    AvatarURL VARCHAR(255), -- SYSTEM GENERATED "   cái này sao ko lưu trực tiếp luôn (blob lưu dc hình với file bao nhiêu đó) "
     UserID INT NOT NULL,
     
     FOREIGN KEY (UserID) REFERENCES UserAccount(UserID) ON DELETE CASCADE ON UPDATE CASCADE
