@@ -8,71 +8,108 @@ DROP DATABASE IF EXISTS db;
 CREATE DATABASE db;
 USE db;
 
-CREATE TABLE PhoneNumber (
+CREATE TABLE IF NOT EXISTS UserAccount (
+    UserID INT PRIMARY KEY,
+    Email VARCHAR(255) NOT NULL UNIQUE,
+    PasswordHash VARCHAR(255) NOT NULL, -- SYSTEM trigger
+    Username VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS UserProfile (
     ProfileID INT AUTO_INCREMENT PRIMARY KEY,
-    PhoneNumber CHAR(10) NOT NULL,
-
-    FOREIGN KEY (ProfileID) REFERENCES Profile(ProfileID)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-    CHECK (PhoneNumber REGEXP '^[0-9]{10}$')
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    AccountStatus VARCHAR(15) NOT NULL,
+    LastLoginTime TIMESTAMP, -- SYSTEM TRIGGER
+    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    Timezone VARCHAR(50) NOT NULL,
+    AvatarURL VARCHAR(255), -- SYSTEM GENERATED "   cái này sao ko lưu trực tiếp luôn (blob lưu dc hình với file bao nhiêu đó) "
+                                                -- answer:
+                                                -- DB phình to rất nhanh
+                                                -- Query chậm
+                                                -- Backup nặng
+    UserID INT NOT NULL,
+    FOREIGN KEY (UserID) REFERENCES UserAccount(UserID)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
-CREATE TABLE COMMENT (
-    CommentID INT AUTO_INCREMENT PRIMARY KEY,
-    TaskID INT AUTO_INCREMENT PRIMARY KEY,
-    CommentContent VARCHAR(500) NOT NULL,
+CREATE TABLE IF NOT EXISTS Organization(
+    OrgID INT AUTO_INCREMENT PRIMARY KEY,
+    OrgName VARCHAR(50),
+    CreationTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    OrgDescription VARCHAR(255),
+    ProfileID INT DEFAULT NULL,
+    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS PhoneNumber(
     ProfileID INT NOT NULL,
-
-    FOREIGN KEY(TaskID) REFERENCES Task(TaskID),
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-    FOREIGN KEY(ProfileID) REFERENCES Profile(ProfileID)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-    Check (CHAR_LENGTH(CommentContent) > 0)
+    PhoneNumber CHAR(10) NOT NULL UNIQUE,
+    PRIMARY KEY (ProfileID, PhoneNumber),
+    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE, -- feature
+--     CHECK (PhoneNumber REGEXP '^[0-9]{10}$') check ở tầng application
 );
 
-CREATE TABLE Notification (
-    NotificationID INT AUTO_INCREMENT PRIMARY KEY,
-    Description VARCHAR(500) NOT NULL,
-    CommentID INT,
-    TaskID INT NOT NULL,
-
-    FOREIGN KEY(TaskID) REFERENCES Task(TaskID)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-    CHECK (CHAR_LENGTH(Description) > 0)
+CREATE TABLE IF NOT EXISTS Workflow (
+    WorkflowID INT AUTO_INCREMENT PRIMARY KEY,
+    WorkflowName VARCHAR(255) NOT NULL
 );
 
-ALTER TABLE Notification
-    ADD FOREIGN KEY(CommentID) REFERENCES COMMENT(CommentID)
-    ON DELETE CASCADE ON UPDATE CASCADE;
-
-CREATE TABLE Receive (
-    ProfileID INT AUTO_INCREMENT PRIMARY KEY,
-    NotificationID INT AUTO_INCREMENT PRIMARY KEY,
-    SentTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
- 
-    FOREIGN KEY (ProfileID) REFERENCES Profile(ProfileID)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (NotificationID) REFERENCES Notification(NotificationID)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-    CHECK (SentTime <= NOW())
+CREATE TABLE IF NOT EXISTS Project (
+    ProjectID INT AUTO_INCREMENT PRIMARY KEY,
+    ProjectName VARCHAR(50) NOT NULL,
+    -- ProjectCode VARCHAR(20) NOT NULL UNIQUE,
+    ProjectDescription VARCHAR(255),
+    ProjectStatus VARCHAR(20) NOT NULL,
+    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FinishedTime TIMESTAMP DEFAULT NULL,
+    OrgID INT, -- trigger
+    WorkflowID INT NOT NULL,
+    FOREIGN KEY (OrgID) REFERENCES Organization(OrgID)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL, --trigger to check the organization status, if the organization is deactivated, then the project under this organization should be deactivated as well
+    FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID)
+        ON UPDATE CASCADE
 );
 
-CREATE TABLE ActivityLog (
-    LogID INT AUTO_INCREMENT PRIMARY KEY,
-    LogContent VARCHAR(500) NOT NULL,
-    Timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ProfileID INT NOT NULL,
-    TaskID INT NOT NULL,
+-- " vấn đề phát sinh: status của milestone và status của task"
+CREATE TABLE IF NOT EXISTS Milestone(
+    MilestoneID INT AUTO_INCREMENT PRIMARY KEY,
+    MilestoneName VARCHAR(50),  -- Semantic Defaulting
+    MilestoneStatus VARCHAR(15), -- Semantic Status.
+    MilestoneGoal VARCHAR(255),
+    StartDate DATE DEFAULT NULL,
+    EndDate DATE DEFAULT NULL
+);
+------ stopp there to check actor
+CREATE TABLE IF NOT EXISTS Board (
+    BoardID INT AUTO_INCREMENT PRIMARY KEY,
+    BoardName VARCHAR(50) NOT NULL,
+    BoardType VARCHAR(50) NOT NULL,
+    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CreatorID INT NOT NULL, -- Trigger
+    ProjectID INT NOT NULL,
 
-    FOREIGN KEY(ProfileID) REFERENCES Profile(ProfileID)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY(TaskID) REFERENCES Task(TaskID)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-    CHECK (CHAR_LENGTH(LogContent) > 0)
+    FOREIGN KEY (CreatorID) REFERENCES UserProfile(ProfileID)
+        ON UPDATE CASCADE,
+    FOREIGN KEY (ProjectID) REFERENCES Project(ProjectID)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS TaskStatus (
+    StatusID INT AUTO_INCREMENT INT PRIMARY KEY,
+    StatusName VARCHAR(50) NOT NULL,
+    WorkflowID INT NOT NULL,
+    -- STATUS CATEGORY
+    -- DISPLAY ORDER
+    FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID) ON UPDATE CASCADE
+);
 CREATE TABLE IF NOT EXISTS Task (
     TaskID INT AUTO_INCREMENT PRIMARY KEY,
     Title VARCHAR(50) NOT NULL,
@@ -88,35 +125,48 @@ CREATE TABLE IF NOT EXISTS Task (
     AssigneeID INT DEFAULT NULL,
     BoardID INT,
 
-    FOREIGN KEY(ParentTaskID) REFERENCES Task(TaskID) ON UPDATE CASCADE ON DELETE CASCADE,  -- trigger to check the level of the task, if parent task is epic, then the child task can be story or bug, if parent task is story, then the child task can only be subtask, if parent task is bug, then it cannot have child task
-    FOREIGN KEY(StatusID) REFERENCES TaskStatus(StatusID) ON UPDATE CASCADE, -- trigger to check the status transition, only allow valid status transition based on the workflow design
-    FOREIGN KEY(MileStoneID) REFERENCES Milestone(MilestoneID) ON UPDATE CASCADE, -- trigger to check the status of the milestone, if the milestone is closed, then all the task under this milestone should be closed as well
-    FOREIGN KEY(ReporterID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE, -- trigger to check the account status of the reporter, if the account is deactivated, then the reporter cannot report a task
-    FOREIGN KEY(AssigneeID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE, -- trigger to check the account status of the assignee, if the account is deactivated, then the assignee cannot be assigned a task
-    FOREIGN KEY(BoardID) REFERENCES Board(BoardID) ON UPDATE CASCADE ON DELETE SET NULL -- trigger to check the board status, if the board is archived, then all the task under this board should be archived as well
+    FOREIGN KEY(ParentTaskID) REFERENCES Task(TaskID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,  -- trigger to check the level of the task, if parent task is epic, then the child task can be story or bug, if parent task is story, then the child task can only be subtask, if parent task is bug, then it cannot have child task
+    FOREIGN KEY(StatusID) REFERENCES TaskStatus(StatusID)
+        ON UPDATE CASCADE, -- trigger to check the status transition, only allow valid status transition based on the workflow design
+    FOREIGN KEY(MilestoneID) REFERENCES Milestone(MilestoneID)
+        ON UPDATE CASCADE, -- trigger to check the status of the milestone, if the milestone is closed, then all the task under this milestone should be closed as well
+    FOREIGN KEY(ReporterID) REFERENCES UserProfile(ProfileID)
+        ON UPDATE CASCADE, -- trigger to check the account status of the reporter, if the account is deactivated, then the reporter cannot report a task
+    FOREIGN KEY(AssigneeID) REFERENCES UserProfile(ProfileID)
+        ON UPDATE CASCADE, -- trigger to check the account status of the assignee, if the account is deactivated, then the assignee cannot be assigned a task
+    FOREIGN KEY(BoardID) REFERENCES Board(BoardID)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL -- trigger to check the board status, if the board is archived, then all the task under this board should be archived as well
 );
 
 CREATE TABLE IF NOT EXISTS Story (
     TaskID INT,
     StoryPoint INT DEFAULT 0,
 
-    FOREIGN KEY(TaskID) REFERENCES Task(TaskID) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY(TaskID) REFERENCES Task(TaskID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
     PRIMARY KEY(TaskID)
 );
 
 CREATE TABLE IF NOT EXISTS Bug (
-    TaskID INT PRIMARY KEY,
+    TaskID INT,
     Severity INT NOT NULL,
-
-    FOREIGN KEY(TaskID) REFERENCES Task(TaskId) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY(TaskID) REFERENCES Task(TaskId)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
     PRIMARY KEY(TaskID)
 );
 
 CREATE TABLE IF NOT EXISTS Epic  (
-    TaskID INT PRIMARY KEY,
+    TaskID INT,
     Goal VARCHAR(255) NOT NULL,
 
-    FOREIGN KEY(TaskID) REFERENCES Task(TaskID) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY(TaskID) REFERENCES Task(TaskID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
     PRIMARY KEY(TaskID)
 );
 
@@ -124,137 +174,49 @@ CREATE TABLE IF NOT EXISTS LinkedItem (
     TaskID INT NOT NULL,
     LinkedItem VARCHAR(2048) NOT NULL,
 
+    FOREIGN KEY(TaskID) REFERENCES Task(TaskID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
     PRIMARY KEY (TaskID, LinkedItem),
-    FOREIGN KEY(TaskID) REFERENCES Task(TaskID) ON UPDATE CASCADE ON DELETE CASCADE
-);
-""" vấn đề phát sinh: status của milestone và status của task"""
-CREATE TABLE IF NOT EXISTS Milestone(
-    MilestoneID INT AUTO_INCREMENT PRIMARY KEY,
-    MilestoneName VARCHAR(50)  -- Semantic Defaulting
-    MilestoneStatus VARCHAR(15), -- Semantic Status.
-    MilestoneGoal VARCHAR(255),
-    StartDate DATE DEFAULT NULL,
-    EndDate DATE DEFAULT NULL
-);
-CREATE TABLE IF NOT EXISTS UserProfile (
-    ProfileID INT AUTO_INCREMENT PRIMARY KEY,
-    FirstName VARCHAR(50) NOT NULL,
-    LastName VARCHAR(50) NOT NULL,
-    Email VARCHAR(100) NOT NULL UNIQUE,
-    AccountStatus VARCHAR(15) NOT NULL,
-    LastLoginTime TIMESTAMP, -- SYSTEM TRIGGER
-    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    Timezone VARCHAR(50) NOT NULL, 
-    AvatarURL VARCHAR(255), -- SYSTEM GENERATED "   cái này sao ko lưu trực tiếp luôn (blob lưu dc hình với file bao nhiêu đó) "
-    UserID INT NOT NULL,
-    
-    FOREIGN KEY (UserID) REFERENCES UserAccount(UserID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS Organization(
-    OrgID INT AUTO_INCREMENT PRIMARY KEY,
-    OrgName VARCHAR(50),
-    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    OrgDescription VARCHAR(255),
-    ProfileID INT DEFAULT NULL,
-    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE ON DELETE SET NULL
+CREATE TABLE IF NOT EXISTS Comment (
+    CommentID INT AUTO_INCREMENT PRIMARY KEY,
+    CommentContent VARCHAR(500) NOT NULL,
+
+    -- CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    AuthorID INT NOT NULL,
+    TaskID INT NOT NULL,
+
+    FOREIGN KEY (AuthorID) REFERENCES UserProfile(ProfileID) ON DELETE CASCADE,
+    FOREIGN KEY (TaskID) REFERENCES Task(TaskID) ON DELETE CASCADE -- delete a task will delete all the comments under this task;
+    Check (CHAR_LENGTH(TRIM(CommentContent)) > 0)
 );
 
-" organization if not doing business like jira plus or pro or businees so it must be
-replaced by USERPROFILE because the organization is not the main entity in our system, and also it is not necessary to have organization to use our system, 
-so we can remove the organization table and replace it with user profile, 
-and also we can add a field in user profile to indicate whether the user is an admin or not, so that we can manage the permissions of the user based on this field
-
---> solution = use directly user profile as ORGANAZATION AND ALSO ADD A FIELD IN USER PROFILE TO INDICATE WHETHER THE USER IS AN ADMIN OR NOT, SO THAT WE CAN MANAGE THE PERMISSIONS OF THE USER BASED ON THIS FIELD
-"
-CREATE TABLE IF NOT EXISTS UserAccount (
-    UserID INT PRIMARY KEY,
-    Email VARCHAR(255) NOT NULL UNIQUE,
-    PasswordHash VARCHAR(255) NOT NULL, -- SYSTEM trigger
-    Username VARCHAR(50) NOT NULL UNIQUE 
-);
-
-
-CREATE TABLE IF NOT EXISTS PhoneNumber(
-    ProfileID INT NOT NULL,
-    CountryCode VARCHAR(5) NOT NULL,
-    PhoneNumber VARCHAR(20) NOT NULL, 
-    PRIMARY KEY (ProfileID, CountryCode ,PhoneNumber),
-    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID) ON DELETE CASCADE ON UPDATE CASCADE -- feature
-);
-
-
-
-CREATE TABLE IF NOT EXISTS Workflow (
-    WorkflowID INT AUTO_INCREMENT PRIMARY KEY,
-    WorkflowName VARCHAR(255) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS TaskStatus (
-    StatusID INT AUTO_INCREMENT INT PRIMARY KEY,
-    StatusName VARCHAR(50) NOT NULL,
-    WorkflowID INT NOT NULL,
-    -- STATUS CATEGORY
-    -- DISPLAY ORDER 
-    FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID) ON UPDATE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS Project (
-    ProjectID INT AUTO_INCREMENT PRIMARY KEY,
-    ProjectName VARCHAR(50) NOT NULL,
-    -- ProjectCode VARCHAR(20) NOT NULL UNIQUE,
-    ProjectDescription VARCHAR(255),
-    ProjectStatus VARCHAR(20) NOT NULL,
-    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FinishedTime TIMESTAMP DEFAULT NULL,
-    OrgID INT, -- trigger
-    WorkflowID INT NOT NULL,
-    FOREIGN KEY (OrgID) REFERENCES Organization(OrgID) ON UPDATE CASCADE ON DELETE SET NULL, --trigger to check the organization status, if the organization is deactivated, then the project under this organization should be deactivated as well
-    FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID) ON UPDATE CASCADE 
-); 
-
------- stopp there to check actor
-CREATE TABLE IF NOT EXISTS Board (
-    BoardID INT AUTO_INCREMENT PRIMARY KEY,
-    BoardName VARCHAR(50) NOT NULL,
-    BoardType VARCHAR(50) NOT NULL,
-    CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CreatorID INT NOT NULL, -- Trigger 
-    ProjectID INT NOT NULL,
-
-    FOREIGN KEY (CreatorID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE,
-    FOREIGN KEY (ProjectID) REFERENCES Project(ProjectID) ON UPDATE CASCADE ON DELETE SET NULL
-);
-
-CREATE TABLE IF NOT EXISTS Notify(
+CREATE TABLE IF NOT EXISTS Notification (
     NotificationID INT AUTO_INCREMENT PRIMARY KEY,
     NotiDescription VARCHAR(255) NOT NULL,
     CommentID INT NOT NULL,
     TaskID INT NOT NULL,
 
-    FOREIGN KEY (CommentID) REFERENCES Comment(CommentID) ON UPDATE CASCADE ,
-    FOREIGN KEY (TaskID) REFERENCES Task(TaskID) ON UPDATE CASCADE
+    FOREIGN KEY (CommentID) REFERENCES Comment(CommentID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (TaskID) REFERENCES Task(TaskID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CHECK (CHAR_LENGTH(TRIM(Description)) > 0)
 );
 
-
-CREATE TABLE IF NOT EXISTS Comment (
-    CommentID INT AUTO_INCREMENT PRIMARY KEY,
-    CommentContent VARCHAR(255) NOT NULL,
-    -- CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
-    AuthorID INT NOT NULL,
-    TaskID INT NOT NULL,
-
-    FOREIGN KEY (AuthorID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE,
-    FOREIGN KEY (TaskID) REFERENCES Task(TaskID) ON UPDATE CASCADE -- delete a task will delete all the comments under this task;
-);
 CREATE TABLE IF NOT EXISTS  NotificationReceive(
     ProfileID int NOT NULL,
     NotificationID int NOT NULL,
     SentTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (ProfileID, NotificationID),
-    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE,
-    FOREIGN KEY (NotificationID) REFERENCES Notify(NotificationID) ON UPDATE CASCADE 
+    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID)
+        ON UPDATE CASCADE,
+    FOREIGN KEY (NotificationID) REFERENCES Notification(NotificationID)
+        ON UPDATE CASCADE
     -- trigger to check the account status of the user, if the account is deactivated, then the user cannot receive notification
 );
 
@@ -279,8 +241,12 @@ CREATE TABLE IF NOT EXISTS RolePermission(
     PermissionID INT NOT NULL,
 
     PRIMARY KEY (RoleID, PermissionID),
-    FOREIGN KEY (RoleID) REFERENCES ProjectRole(RoleID) ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (PermissionID) REFERENCES Permission(PermissionID) ON UPDATE CASCADE ON DELETE CASCADE
+    FOREIGN KEY (RoleID) REFERENCES ProjectRole(RoleID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (PermissionID) REFERENCES Permission(PermissionID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS ProjectRoleActor (
@@ -288,27 +254,44 @@ CREATE TABLE IF NOT EXISTS ProjectRoleActor (
     RoleID INT NOT NULL,
     ProfileID INT NOT NULL,
     Roleid INT NOT NULL,
-    FOREIGN KEY (RoleID) REFERENCES ProjectRole(RoleID) ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE ON DELETE CASCADE
+    FOREIGN KEY (RoleID) REFERENCES ProjectRole(RoleID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
 );
 -- trigger to check the authority of the user when performing action, 
 -- and also to log the action into activity log
 -- = private + automatically generated, not allow to insert or update directly
 CREATE TABLE IF NOT EXISTS ActivityLog (
     LogID INT AUTO_INCREMENT PRIMARY KEY,
-    ActionDetail VARCHAR(255) NOT NULL, 
+    LogDetail VARCHAR(500) NOT NULL,
     -- e.g. "User A created a task", "User B updated a task", "User C commented on a task"  
-    ActionCode VARCHAR(50) NOT NULL,
-    ActionTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ActionCode VARCHAR(50) NOT NULL, -- nên sửa
+    Time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     ProfileID INT NOT NULL, ---> projecrt role actor
     -- activy = profileID + (projectroleactor + project role + permission)
     -- --> result = trigger check authority + log action
     
     TaskID INT NOT NULL,
-    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID) ON UPDATE CASCADE ,
-    FOREIGN KEY (TaskID) REFERENCES Task(TaskID) ON UPDATE CASCADE 
+    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID)
+        ON UPDATE CASCADE ,
+    FOREIGN KEY (TaskID) REFERENCES Task(TaskID)
+        ON UPDATE CASCADE
 );
+
+-- " organization if not doing business like jira plus or pro or businees so it must be
+-- replaced by USERPROFILE because the organization is not the main entity in our system, and also it is not necessary to have organization to use our system,
+-- so we can remove the organization table and replace it with user profile,
+-- and also we can add a field in user profile to indicate whether the user is an admin or not, so that we can manage the permissions of the user based on this field
+--
+-- --> solution = use directly user profile as ORGANAZATION AND ALSO ADD A FIELD IN USER PROFILE TO INDICATE WHETHER THE USER IS AN ADMIN OR NOT, SO THAT WE CAN MANAGE THE PERMISSIONS OF THE USER BASED ON THIS FIELD
+-- "
+
+" TO DO AFTER...: Kiểm tra thứ tự tạo bảng (rất quan trọng)
+"
 "
 ✅ How to verify whether a user can perform an action
 ActivityLog itself should not be the authorization engine. 
@@ -349,3 +332,16 @@ LIMIT 1;
 "added countrycode in phone number to support phone number standardization, and also added timezone in user profile to support users from different regions"
 
 "Status Catgory removed - cannot determined conceptually, and also can be determined by the workflow design, so it is redundant"
+
+-- %Status VARCHAR(15)
+-- Dùng string tự do → dễ lỗi dữ liệu (active, Active, ACTIVE…)
+-- 👉 Nên dùng:
+--
+-- Option 1 (simple):
+--
+-- AccountStatus ENUM('Active','Inactive','Suspended') NOT NULL
+--
+-- Option 2 (chuẩn hóa):
+--
+-- StatusID → bảng riêng
+" Hình như đang có 2 bảng PhoneNumber"
