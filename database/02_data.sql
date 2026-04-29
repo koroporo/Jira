@@ -1,76 +1,76 @@
 INSERT INTO UserAccount (Email, PasswordHash, Username) 
 VALUES
-    ('minhhoang.ng92@gmail.com',
-     SHA2('mNg#1992', 256),
-     'hoang.ng92'),
+    ('alex.carter@example.com',
+     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'alex.carter'),
 
-    ('tu4nk1etpham@gmail.com',
-     SHA2('TK1et_Ph4m', 256),
-     'kiet.pham97'),
+    ('sam.lee@example.com',
+     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'sam.lee'),
 
-    ('thithu.dang@outlook.com',
-     SHA2('Thu@D4ng!95', 256),
-     'thithu.dang'),
+    ('taylor.nguyen@example.com',
+     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'taylor.nguyen'),
 
-    ('pham.quoc.dat@outlook.com',
-     SHA2('Kh@iD1nh98', 256),
-     'dinhkhai_qk'),
+    ('jordan.pham@example.com',
+     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'jordan.pham'),
 
-    ('nhung.le88@hotmail.com',
-     SHA2('Nhung_@88', 256),
-     'nhung88'),
+    ('casey.tran@example.com',
+     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'casey.tran'),
 
-    ('dvtung98@gmail.com',
-     SHA2('dT98#Nqv', 256),
-     'dvtung_98');
+    ('jamie.dang@example.com',
+     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'jamie.dang');
 
 INSERT INTO UserProfile (FirstName, LastName, Email, AccountStatus, Timezone, AvatarURL, UserID)
 VALUES
-    ('Minh Hoàng', 'Nguyễn',
-     'minhhoang.ng92@gmail.com',
+    ('Alex', 'Carter',
+     'alex.carter@example.com',
      'Online',          
      'Asia/Ho_Chi_Minh', 
-     'https://jira.com/avatars/hoang.ng92.png', 1),
+     'https://jira.com/avatars/alex.carter.png', 1),
 
-    ('Tuấn Kiệt', 'Phạm',
-     'tu4nk1etpham@gmail.com',
+    ('Sam', 'Lee',
+     'sam.lee@example.com',
      'Online',
      'Asia/Ho_Chi_Minh',
-     'https://jira.com/avatars/k1et_pham97.png', 2),
+     'https://jira.com/avatars/sam.lee.png', 2),
 
-    ('Thị Thu', 'Đặng',     
-     'thithu.dang@outlook.com',
+    ('Taylor', 'Nguyen',     
+     'taylor.nguyen@example.com',
      'Do Not Disturb',
      'Asia/Ho_Chi_Minh',
-     'https://jira.com/avatars/thithu.dang.png', 3),
+     'https://jira.com/avatars/taylor.nguyen.png', 3),
 
-    ('Quang Khải', 'Đinh',
-     'pham.quoc.dat@outlook.com',
+    ('Jordan', 'Pham',
+     'jordan.pham@example.com',
      'Offline',
      'Asia/Ho_Chi_Minh',  
-     'https://jira.com/avatars/dinhkhai_qk.png', 4),
+     'https://jira.com/avatars/jordan.pham.png', 4),
 
-    ('Hồng Nhung', 'Lê',
-     'nhung.le88@hotmail.com',
+    ('Casey', 'Tran',
+     'casey.tran@example.com',
      'Idle',
      'Asia/Ho_Chi_Minh',
-     'https://jira.com/avatars/nhung88.png', 5),
+     'https://jira.com/avatars/casey.tran.png', 5),
 
-    ('Văn Tùng', 'Đặng',
-     'dvtung98@gmail.com',
+    ('Jamie', 'Dang',
+     'jamie.dang@example.com',
      'Offline',
      'Asia/Ho_Chi_Minh',
-     'https://jira.com/avatars/dvtung_98.png', 6);
+     'https://jira.com/avatars/jamie.dang.png', 6);
 
 INSERT INTO PhoneNumber (ProfileID, PhoneNumber) 
 VALUES
-    (1, '0902524262'),
-    (2, '0383248324'),
-    (3, '0918667090'),
-    (4, '0703220253'),
-    (5, '0765548061'),
-    (6, '0329031039'),
-    (1, '0986736826');
+    (1, '0000000001'),
+    (2, '0000000002'),
+    (3, '0000000003'),
+    (4, '0000000004'),
+    (5, '0000000005'),
+    (6, '0000000006'),
+    (1, '0000000007');
     
 INSERT INTO Milestone(MilestoneName, MilestoneStatus, MilestoneGoal, StartDate, EndDate)
 VALUES ('Project Kickoff',
