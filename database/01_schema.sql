@@ -35,16 +35,6 @@ CREATE TABLE IF NOT EXISTS UserProfile (
         ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS Organization(
-    OrgID INT AUTO_INCREMENT PRIMARY KEY,
-    OrgName VARCHAR(50),
-    CreationTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    OrgDescription VARCHAR(255),
-    ProfileID INT DEFAULT NULL,
-    FOREIGN KEY (ProfileID) REFERENCES UserProfile(ProfileID)
-        ON UPDATE CASCADE
-        ON DELETE SET NULL
-);
 CREATE TABLE IF NOT EXISTS PhoneNumber(
     ProfileID INT NOT NULL,
     PhoneNumber CHAR(10) NOT NULL,
@@ -60,6 +50,14 @@ CREATE TABLE IF NOT EXISTS Workflow (
     WorkflowName VARCHAR(255) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS TaskStatus (
+    WorkflowID INT NOT NULL,
+    StatusID INT AUTO_INCREMENT PRIMARY KEY,
+    StatusName VARCHAR(15) NOT NULL,
+    OrderIndex INT
+
+);
+
 CREATE TABLE IF NOT EXISTS Project (
     ProjectID INT AUTO_INCREMENT PRIMARY KEY,
     ProjectName VARCHAR(50) NOT NULL,
@@ -68,10 +66,10 @@ CREATE TABLE IF NOT EXISTS Project (
     ProjectStatus VARCHAR(20) NOT NULL,
     CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FinishedTime TIMESTAMP DEFAULT NULL,
-    OrgID INT, -- trigger
+    OwnerID INT, -- trigger
     WorkflowID INT NOT NULL,
-    FOREIGN KEY (OrgID) REFERENCES Organization(OrgID)
-        ON UPDATE CASCADE
+    FOREIGN KEY (OwnerID) REFERENCES UserProfile(ProfileID)
+        ON UPDATE CASCADE -- check nha!
         ON DELETE SET NULL, -- trigger to check the organization status, if the organization is deactivated, then the project under this organization should be deactivated as well
     FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID)
         ON UPDATE CASCADE
@@ -232,10 +230,9 @@ CREATE TABLE IF NOT EXISTS Permission (
 
 CREATE TABLE IF NOT EXISTS ProjectRole (
     RoleID INT AUTO_INCREMENT PRIMARY KEY,
-    RoleDescription VARCHAR(255) NOT NULL,
     RoleName VARCHAR(50) NOT NULL,
-    OrgID INT NOT NULL,
-    FOREIGN KEY (OrgID) REFERENCES Organization(OrgID) -- change later after org change to user profiel
+
+    UNIQUE (RoleName)
 );
 
 CREATE TABLE IF NOT EXISTS RolePermission(

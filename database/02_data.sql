@@ -64,13 +64,13 @@ VALUES
 
 INSERT INTO PhoneNumber (ProfileID, PhoneNumber) 
 VALUES
-    (1, '0000000001'),
-    (2, '0000000002'),
-    (3, '0000000003'),
-    (4, '0000000004'),
-    (5, '0000000005'),
-    (6, '0000000006'),
-    (1, '0000000007');
+    (1, '0900000001'),
+    (2, '0900000002'),
+    (3, '0900000003'),
+    (4, '0900000004'),
+    (5, '0900000005'),
+    (6, '0900000006'),
+    (1, '0900000007');
     
 INSERT INTO Milestone(MilestoneName, MilestoneStatus, MilestoneGoal, StartDate, EndDate)
 VALUES ('Project Kickoff',
@@ -82,34 +82,163 @@ VALUES ('Project Kickoff',
         'Completed',
         'Requirements elicitation'
         2026-02-04, 2026-02-15),
+INSERT INTO ProjectRole(RoleName)
+VALUES
+    ('Project Manager'),
+    ('Backend Developer'),
+    ('Frontend Developer'),
+    ('Graphic Designer'),
+    ('QA Engineer'),
+    ('Marketing Specialist'),
+    ('HR Specialist'),
+    ('Recruiter');
+INSERT INTO Workflow (WorkflowName)
+VALUES
+    ('Default'), -- ID = 1
+    ('Marketing Task'), -- ID = 2
+    ('Dev Task'),
+    ('Tester Task'),
+    ('HR Task');
 
-       ('UI/UX design',
-        'In Progress',
-        'Create and iterate UI designs for user flows',
-        2026-05-16, 2026-05-28),
+INSERT INTO TaskStatus (WorkflowID, StatusName, OrderIndex)
+VALUES
+    -- Default
+    (1, 'To Do', 1),
+    (1, 'In Progress', 2),
+    (1, 'Review', 3),
+    (1, 'Done', 4),
 
-       ('Core development',
-        'Not Started',
-        'Implement features and deploy product',
-        2026-05-29, 2026-06-20),
+    -- Marketing
+    (2, 'Idea', 1),
+    (2, 'Planning', 2),
+    (2, 'Executing', 3),
+    (2, 'Done', 4),
 
-       ('Quality Assurance',
-        'Not Started',
-        'Perform quality control and prepare for release',
-        2026-06-21, 2026-06-30),
+    -- Dev
+    (3, 'To Do', 1),
+    (3, 'In Progress', 2),
+    (3, 'Code Review', 3),
+    (3, 'Testing', 4),
+    (3, 'Done', 5),
 
-       ('Others',
-        'In Progress',
-        NULL,NULL, NULL);
+    -- Tester
+    (4, 'To Test', 1),
+    (4, 'Testing', 2),
+    (4, 'Bug Found', 3),
+    (4, 'Done', 4),
+
+    -- HR
+    (5, 'Applied', 1),
+    (5, 'Screening', 2),
+    (5, 'Interview', 3),
+    (5, 'Offer', 4),
+    (5, 'Hired', 5),
+    (5, 'Rejected', 6);
+
+INSERT INTO Project (
+    ProjectName,
+    ProjectDescription,
+    ProjectStatus,
+    FinishedTime,
+    OwnerID,
+    WorkflowID
+)
+VALUES
+-- 1. E-commerce Platform (Default workflow)
+(
+    'E-commerce Platform',
+    'Development of a scalable multi-vendor e-commerce platform targeting SME retailers in Southeast Asia.
+    Scope includes product catalog management, payment gateway integration (Stripe, PayPal), order processing,
+    and logistics tracking. Team consists of 1 PM, 5 backend engineers, 3 frontend engineers, and 2 QA engineers.
+    Key stakeholders include external retail partners and internal sales team.',
+    'In Progress',
+    NULL,
+    1,
+    1
+),
+
+-- 2. Marketing Campaign Q1
+(
+    'Marketing Campaign Q1',
+    'Execution of Q1 digital marketing strategy focusing on brand awareness and customer acquisition.
+    Channels include Facebook Ads, Google Ads, and email marketing. Deliverables include campaign creatives,
+    landing pages, and performance reports. Collaboration between marketing team, design team, and external ad agency.',
+    'To Do',
+    '2026-03-31',
+    1,
+    2
+),
+
+-- 3. HR Hiring Backend Engineers
+(
+    'HR - Hiring Backend Engineers',
+    'Recruitment drive to hire 5 backend engineers specializing in Java and Spring Boot.
+    Process includes job posting, CV screening, technical interviews, and onboarding.
+    Coordination between HR team and engineering managers. Target candidates have 2-5 years experience.',
+    'To Do',
+    '2026-06-18',
+    1,
+    5
+),
+
+-- 4. Mobile Banking App
+(
+    'Mobile Banking App',
+    'Development of a secure mobile banking application for retail customers. Features include account management,
+    fund transfers, bill payments, and biometric authentication. Compliance with financial regulations and security
+    standards (PCI DSS). Team includes mobile developers, backend engineers, security specialists, and QA.',
+    'To Do',
+    '2026-12-15',
+    1,
+    3
+),
+
+-- 5. QA Test for Project AC
+(
+    'QA Test for Project AC',
+    'Comprehensive testing phase for Project AC including functional testing, regression testing, and performance testing.
+    Test cases are derived from business requirements and system specifications. QA team coordinates closely with developers
+    to identify and resolve defects before production release.',
+    'In Progress',
+    '2026-05-10',
+    2,
+    4
+);
+
+
+INSERT INTO Milestone
+(MilestoneName, MilestoneStatus, MilestoneGoal, StartDate, EndDate)
+VALUES
+    ('Project Kickoff', 'Completed',
+     'Align team on scope, timeline and initial requirements',
+     '2026-02-01', '2026-02-04'),
+
+    ('Requirements phase', 'Completed',
+     'Requirements elicitation',
+     '2026-02-04', '2026-02-15'),
+
+    ('UI/UX design', 'In Progress',
+     'Create and iterate UI designs for user flows',
+     '2026-05-16', '2026-05-28'),
+
+    ('Core development', 'Not Started',
+     'Implement features and deploy product',
+     '2026-05-29', '2026-06-20'),
+
+    ('Quality Assurance', 'Not Started',
+     'Perform quality control and prepare for release',
+     '2026-06-21', '2026-06-30'),
+
+    ('Others', 'In Progress', NULL, NULL, NULL);
 
 INSERT INTO Task (
-    Title, Description, Priority, DueDate,
+    Title, TaskDescription, TaskPriority, DueDate,
     StatusID, MilestoneID, ReporterID, AssigneeID, BoardID
 )
 VALUES
     ('Set up project repository',
      'Initialize Git repository and basic project structure.',
-     'Medium',
+     0,
      '2026-02-02',
      3, 1, 1, 2, 1),
 
@@ -235,41 +364,41 @@ VALUES
 
 INSERT INTO Notification (NotiDescription, CommentID, TaskID)
 VALUES
-    ('kiet.pham97 commented on "Set up project repository".',
+    ('sam.lee commented on "Set up project repository".',
      1,  1),
-    ('thithu.dang commented on "Set up project repository".',
+    ('jamie.dang commented on "Set up project repository".',
      2,  1),
-    ('thithu.dang commented on "Plan marketing campaign".',
+    ('jamie.dang commented on "Plan marketing campaign".',
      3,  2),
-    ('thithu.dang commented on "Gather user requirements".',
+    ('jamie.dang commented on "Gather user requirements".',
      4,  3),
-    ('kiet.pham97 commented on "Gather user requirements".',
+    ('jordan.pham commented on "Gather user requirements".',
      5,  3),
-    ('kiet.pham97 commented on "Write SRS document".',
+    ('jordan.pham commented on "Write SRS document".',
      6,  4),
-    ('thithu.dang commented on "Write SRS document".',
+    ('jamie.dang commented on "Write SRS document".',
      7,  4),
-    ('kiet.pham97 commented on "Design student interface".',
+    ('jordan.pham commented on "Design student interface".',
      8,  5),
-    ('kiet.pham97 commented on "Design high-fidelity UI".',
+    ('jordan.pham commented on "Design high-fidelity UI".',
      9,  6),
-    ('thithu.dang commented on "Design high-fidelity UI".',
+    ('jamie.dang commented on "Design high-fidelity UI".',
      10,  6),
-    ('thithu.dang commented on "Implement authentication module".',
+    ('jamie.dang commented on "Implement authentication module".',
      11,  7),
-    ('kiet.pham97 commented on "Implement authentication module".',
+    ('jordan.pham commented on "Implement authentication module".',
      12,  7),
-    ('kiet.pham97 commented on "Implement payment module".',
+    ('jordan.pham commented on "Implement payment module".',
      13,  8),
-    ('thithu.dang commented on "Implement payment module".',
+    ('jamie.dang commented on "Implement payment module".',
      14,  8),
-    ('thithu.dang commented on "Write test cases".',
+    ('jamie.dang commented on "Write test cases".',
      15,  9),
-    ('thithu.dang commented on "[URGENT] Fix server error".',
+    ('jamie.dang commented on "[URGENT] Fix server error".',
      16, 10),
-    ('kiet.pham97 commented on "[URGENT] Fix server error".', 
+    ('jordan.pham commented on "[URGENT] Fix server error".', 
      17, 10),
-    ('thithu.dang commented on "Prepare requirements specification".',
+    ('jamie.dang commented on "Prepare requirements specification".',
      18, 11);
 
 INSERT INTO NotificationReceive (ProfileID, NotificationID, SentTime)
