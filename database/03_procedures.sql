@@ -374,3 +374,27 @@ BEGIN
     SELECT CONCAT('Task "', v_task_title, '" (ID: ', p_TaskID, ') has been successfully deleted.') AS Result;
 END$$
 DELIMITER ;
+
+-- ============================================================
+-- QUICK SMOKE-TEST CALLS
+-- ============================================================
+-- Test Insert: valid task
+-- CALL sp_insert_task('Fix login bug', 'Users cannot log in on mobile', 3,
+--     '2026-12-31 00:00:00', NULL, 1, NULL, 1, 2, 1, @new_id);
+-- SELECT @new_id;
+
+-- Test Insert: blank title → should error
+-- CALL sp_insert_task('', NULL, 0, NULL, NULL, 1, NULL, 1, NULL, NULL, @new_id);
+
+-- Test Insert: past due date → should error
+-- CALL sp_insert_task('Old task', NULL, 1, '2020-01-01 00:00:00',
+--     NULL, 1, NULL, 1, NULL, NULL, @new_id);
+
+-- Test Update: change priority and assignee
+-- CALL sp_update_task(1, NULL, NULL, 4, NULL, NULL, NULL, 3, NULL);
+
+-- Test Delete: task with active children → should error (force=0)
+-- CALL sp_delete_task(1, 0);
+
+-- Test Delete: force delete
+-- CALL sp_delete_task(1, 1);
