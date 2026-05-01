@@ -164,3 +164,121 @@ BEGIN
     SET p_NewTaskID = LAST_INSERT_ID();
 END$$
 DELIMITER ;
+
+-- ============================================================
+-- 2. sp_update_task
+--    Updates editable fields of an existing Task.
+--    Only non-NULL arguments cause a field to change
+--    (pass NULL to leave a field unchanged).
+-- ============================================================
+DROP PROCEDURE IF EXISTS sp_update_task;
+DELIMITER $$
+CREATE PROCEDURE sp_update_task(
+    IN p_TaskID       INT,
+    IN p_Title        VARCHAR(50),    -- NULL = no change
+    IN p_Description  VARCHAR(255),   -- NULL = no change
+    IN p_Priority     INT,            -- NULL = no change
+    IN p_DueDate      TIMESTAMP,      -- NULL = no change  (use '1970-01-01' to clear)
+    IN p_StatusID     INT,            -- NULL = no change
+    IN p_MilestoneID  INT,            -- NULL = no change
+    IN p_AssigneeID   INT,            -- NULL = no change  (use 0 to clear the assignee)
+    IN p_BoardID      INT             -- NULL = no change
+)
+BEGIN
+    DECLARE v_exists            TINYINT DEFAULT 0;
+    DECLARE v_milestone_status  VARCHAR(15);
+    DECLARE v_status_workflow   INT;
+    DECLARE v_assignee_status   VARCHAR(15);
+
+    -- ── 1. Task must exist ────────────────────────────────────
+    SELECT COUNT(*) INTO v_exists FROM Task WHERE TaskID = p_TaskID;
+    IF v_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Task not found.';
+    END IF;
+
+    -- ── 2. Title must not be blank (if being changed) ─────────
+    IF p_Title IS NOT NULL AND CHAR_LENGTH(TRIM(p_Title)) = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Task title must not be empty.';
+    END IF;
+
+    -- ── 3. Priority range (if being changed) ─────────────────
+    IF p_Priority IS NOT NULL AND p_Priority NOT IN (0, 1, 2, 3, 4) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Task priority must be 0 (None), 1 (Low), 2 (Medium), 3 (High), or 4 (Critical).';
+    END IF;
+
+    -- ── 4. DueDate must not be in the past (if being changed) ─
+    IF p_DueDate IS NOT NULL AND p_DueDate != '1970-01-01 00:00:00'
+       AND p_DueDate < NOW() THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Due date must not be set to a date in the past.';
+    END IF;
+
+    -- ── 5. StatusID must exist (if being changed) ─────────────
+    IF p_StatusID IS NOT NULL THEN
+        SELECT WorkflowID INTO v_status_workflow
+        FROM   TaskStatus
+        WHERE  StatusID = p_StatusID
+        LIMIT  1;
+
+        IF v_status_workflow IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'StatusID does not exist in TaskStatus.';
+        END IF;
+    END IF;
+
+    -- ── 6. Milestone must not be closed (if being changed) ────
+    IF p_MilestoneID IS NOT NULL THEN
+        SELECT MilestoneStatus INTO v_milestone_status
+        FROM   Milestone
+        WHERE  MilestoneID = p_MilestoneID
+        LIMIT  1;
+
+        IF v_milestone_status IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'MilestoneID does not exist.';
+        END IF;
+        IF v_milestone_status = 'Closed' THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Cannot move a task to a closed milestone.';
+        END IF;
+    END IF;
+
+    -- ── 7. New assignee (if being changed) must exist ─────────
+    --   Convention: pass 0 to explicitly clear the assignee
+    IF p_AssigneeID IS NOT NULL AND p_AssigneeID != 0 THEN
+        CALL sp_assert_profile_exists(p_AssigneeID, 'Assignee');
+    END IF;
+
+    -- ── 8. BoardID must exist (if being changed) ──────────────
+    IF p_BoardID IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM Board WHERE BoardID = p_BoardID) THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'BoardID does not exist.';
+        END IF;
+    END IF;
+
+    -- ── All checks passed → UPDATE (only changed columns) ─────
+    UPDATE Task
+    SET
+        Title           = COALESCE(NULLIF(TRIM(p_Title), ''),  Title),
+        TaskDescription = COALESCE(p_Description, TaskDescription),
+        TaskPriority    = COALESCE(p_Priority, TaskPriority),
+        DueDate         = CASE
+                            WHEN p_DueDate = '1970-01-01 00:00:00' THEN NULL   -- explicit clear
+                            WHEN p_DueDate IS NOT NULL              THEN p_DueDate
+                            ELSE DueDate
+                          END,
+        StatusID        = COALESCE(p_StatusID,    StatusID),
+        MilestoneID     = COALESCE(p_MilestoneID, MilestoneID),
+        AssigneeID      = CASE
+                            WHEN p_AssigneeID = 0    THEN NULL   -- explicit unassign
+                            WHEN p_AssigneeID IS NOT NULL THEN p_AssigneeID
+                            ELSE AssigneeID
+                          END,
+        BoardID         = COALESCE(p_BoardID, BoardID)
+    WHERE TaskID = p_TaskID;
+END$$
+DELIMITER ;
