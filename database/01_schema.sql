@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS Project (
     ProjectID INT AUTO_INCREMENT PRIMARY KEY,
     ProjectName VARCHAR(50) NOT NULL,
     -- ProjectCode VARCHAR(20) NOT NULL UNIQUE,
-    ProjectDescription VARCHAR(255),
+    ProjectDescription VARCHAR(500),
     ProjectStatus VARCHAR(20) NOT NULL,
     CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FinishedTime TIMESTAMP DEFAULT NULL,
