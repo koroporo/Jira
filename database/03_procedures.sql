@@ -41,7 +41,6 @@ CREATE PROCEDURE sp_create_task(
     OUT p_NewTaskID     INT
 )
 BEGIN
-    DECLARE v_workflow_id       INT;
     DECLARE v_milestone_status  VARCHAR(15);
     DECLARE v_parent_type       VARCHAR(10);  -- 'Epic','Story','Bug','Subtask'
     DECLARE v_status_workflow   INT;
@@ -97,17 +96,15 @@ BEGIN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'MilestoneID does not exist.';
         END IF;
-        IF v_milestone_status = 'Closed' THEN
+        IF v_milestone_status = 'Completed' THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Cannot assign a task to a closed milestone.';
         END IF;
     END IF;
 
     -- ── 8. ParentTask hierarchy rules ────────────────────────
-    --   Epic  → children may be Story or Bug
-    --   Story → children may only be Subtask (plain Task with no Epic/Story/Bug row)
-    --   Bug   → cannot have children
-    --   Subtask → cannot have children
+    --   Rule: Only Epics and Stories can act as parent tasks.
+    --   Rule: Bugs and Subtasks (plain Tasks) are leaf nodes and cannot have children.
     IF p_ParentTaskID IS NOT NULL THEN
         -- Check the parent exists
         IF NOT EXISTS (SELECT 1 FROM Task WHERE TaskID = p_ParentTaskID) THEN
@@ -179,6 +176,7 @@ CREATE PROCEDURE sp_update_task(
     IN p_Description  VARCHAR(255),   -- NULL = no change
     IN p_Priority     INT,            -- NULL = no change
     IN p_DueDate      TIMESTAMP,      -- NULL = no change  (use '1970-01-01' to clear)
+--  IN p_ClearDueDate   TINYINT,       -- 1 = set DueDate to NULL, 0 = no change
     IN p_StatusID     INT,            -- NULL = no change
     IN p_MilestoneID  INT,            -- NULL = no change
     IN p_AssigneeID   INT,            -- NULL = no change  (use 0 to clear the assignee)
@@ -239,7 +237,7 @@ BEGIN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'MilestoneID does not exist.';
         END IF;
-        IF v_milestone_status = 'Closed' THEN
+        IF v_milestone_status = 'Completed' THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Cannot move a task to a closed milestone.';
         END IF;
@@ -270,6 +268,7 @@ BEGIN
                             WHEN p_DueDate IS NOT NULL              THEN p_DueDate
                             ELSE DueDate
                           END,
+--      ClearDueDate    = COALESCE(p_ClearDueDate, ClearDueDate),
         StatusID        = COALESCE(p_StatusID,    StatusID),
         MilestoneID     = COALESCE(p_MilestoneID, MilestoneID),
         AssigneeID      = CASE
@@ -325,8 +324,7 @@ BEGIN
     DECLARE v_task_title    VARCHAR(50);
 
     -- ── 1. Task must exist ────────────────────────────────────
-    SELECT COUNT(*), Title
-    INTO   v_exists, v_task_title
+    SELECT COUNT(*), Title INTO   v_exists
     FROM   Task
     WHERE  TaskID = p_TaskID;
 
@@ -335,20 +333,24 @@ BEGIN
             SET MESSAGE_TEXT = 'Deletion failed: the specified task does not exist.';
     END IF;
 
+    SELECT Title INTO v_task_title
+    FROM   Task
+    WHERE  TaskID = p_TaskID;
     -- ── 2. Count active (non-terminal) child tasks ────────────
     --   Terminal statuses are those whose StatusName is 'Done' or 'Cancelled'.
     --   Any child task linked to a non-terminal status blocks deletion.
     SELECT COUNT(*) INTO v_open_children
     FROM   Task        t
-    JOIN   TaskStatus  ts ON ts.StatusID = t.StatusID
-    WHERE  t.ParentTaskID = p_TaskID
-      AND  ts.StatusName NOT IN ('Done', 'Cancelled');
+    LEFT JOIN TaskStatus  ts ON ts.StatusID = t.StatusID
+     WHERE  t.ParentTaskID = p_TaskID
+       AND  (t.StatusID IS NULL OR ts.StatusName NOT IN ('Done', 'Cancelled'));
 
     IF v_open_children > 0 AND p_ForceDelete = 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Deletion not allowed: this task has child tasks that are still active. Close or reassign all child tasks before deleting the parent.';
     END IF;
 
+    -- Note: Này cứ để r tính sau coi cần ko
     -- ── 3. Also block if task has open comments that are ──────
     --      referenced by unread notifications (data-integrity guard)
     IF EXISTS (
