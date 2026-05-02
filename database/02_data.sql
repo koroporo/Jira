@@ -72,16 +72,6 @@ VALUES
     (6, '0900000006'),
     (1, '0900000007');
     
-INSERT INTO Milestone(MilestoneName, MilestoneStatus, MilestoneGoal, StartDate, EndDate)
-VALUES ('Project Kickoff',
-        'Completed',
-        'Align team on scope, timeline and initial requirements',
-        2026-02-01,2026-02-04),
-
-       ('Requirements phase',
-        'Completed',
-        'Requirements elicitation'
-        2026-02-04, 2026-02-15),
 INSERT INTO ProjectRole(RoleName)
 VALUES
     ('Project Manager'),
