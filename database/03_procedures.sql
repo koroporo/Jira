@@ -378,15 +378,15 @@ DELIMITER ;
 -- QUICK SMOKE-TEST CALLS
 -- ============================================================
 -- Test Insert: valid task
--- CALL sp_insert_task('Fix login bug', 'Users cannot log in on mobile', 3,
+-- CALL sp_create_task('Fix login bug', 'Users cannot log in on mobile', 3,
 --     '2026-12-31 00:00:00', NULL, 1, NULL, 1, 2, 1, @new_id);
 -- SELECT @new_id;
 
 -- Test Insert: blank title → should error
--- CALL sp_insert_task('', NULL, 0, NULL, NULL, 1, NULL, 1, NULL, NULL, @new_id);
+-- CALL sp_create_task('', NULL, 0, NULL, NULL, 1, NULL, 1, NULL, NULL, @new_id);
 
 -- Test Insert: past due date → should error
--- CALL sp_insert_task('Old task', NULL, 1, '2020-01-01 00:00:00',
+-- CALL sp_create_task('Old task', NULL, 1, '2020-01-01 00:00:00',
 --     NULL, 1, NULL, 1, NULL, NULL, @new_id);
 
 -- Test Update: change priority and assignee
