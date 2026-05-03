@@ -3,6 +3,29 @@
 -- Database Systems – Semester 2, 2025-2026
 -- DBMS: MySQL
 -- ============================================================
+-- Create table sequence: (in order to the code can be executable)
+--
+-- 1. UserAccount
+-- 2. UserProfile
+-- 3. PhoneNumber
+-- 4. Project
+-- 5. Milestone
+-- 6. Board
+-- 7. TaskStatus
+-- 8. Transition
+-- 9. Task
+-- 10. Story
+-- 11. Bug
+-- 12. Epic
+-- 13. LinkedItem
+-- 14. Comment
+-- 15. Notification
+-- 16. NotificationReceive
+-- 17. Permission
+-- 18. ProjectRole
+-- 19. RolePermission
+-- 20. ProjectRoleActor
+-- 21. ActivityLog
 
 DROP DATABASE IF EXISTS db;
 CREATE DATABASE db;
@@ -45,18 +68,8 @@ CREATE TABLE IF NOT EXISTS PhoneNumber(
 --     CHECK (PhoneNumber REGEXP '^[0-9]{10}$') check ở tầng application
 );
 
-CREATE TABLE IF NOT EXISTS Workflow (
-    WorkflowID INT AUTO_INCREMENT PRIMARY KEY,
-    WorkflowName VARCHAR(255) NOT NULL
-);
 
-CREATE TABLE IF NOT EXISTS TaskStatus (
-    WorkflowID INT NOT NULL,
-    StatusID INT AUTO_INCREMENT PRIMARY KEY,
-    StatusName VARCHAR(15) NOT NULL,
-    OrderIndex INT
 
-);
 
 CREATE TABLE IF NOT EXISTS Project (
     ProjectID INT AUTO_INCREMENT PRIMARY KEY,
@@ -67,12 +80,9 @@ CREATE TABLE IF NOT EXISTS Project (
     CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FinishedTime TIMESTAMP DEFAULT NULL,
     OwnerID INT, -- trigger
-    WorkflowID INT NOT NULL,
     FOREIGN KEY (OwnerID) REFERENCES UserProfile(ProfileID)
         ON UPDATE CASCADE -- check nha!
-        ON DELETE SET NULL, -- trigger to check the organization status, if the organization is deactivated, then the project under this organization should be deactivated as well
-    FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID)
-        ON UPDATE CASCADE
+        ON DELETE SET NULL -- trigger to check the organization status, if the organization is deactivated, then the project under this organization should be deactivated as well
 );
 
 -- " vấn đề phát sinh: status của milestone và status của task"
@@ -84,7 +94,6 @@ CREATE TABLE IF NOT EXISTS Milestone(
     StartDate DATE DEFAULT NULL,
     EndDate DATE DEFAULT NULL
 );
--- ---- stopp there to check actor
 CREATE TABLE IF NOT EXISTS Board (
     BoardID INT AUTO_INCREMENT PRIMARY KEY,
     BoardName VARCHAR(50) NOT NULL,
@@ -99,19 +108,33 @@ CREATE TABLE IF NOT EXISTS Board (
         ON UPDATE CASCADE
 
 );
-
 CREATE TABLE IF NOT EXISTS TaskStatus (
-    StatusID INT AUTO_INCREMENT PRIMARY KEY,
-    StatusName VARCHAR(50) NOT NULL,
-    WorkflowID INT NOT NULL,
-    -- STATUS CATEGORY
-    -- DISPLAY ORDER
-    FOREIGN KEY (WorkflowID) REFERENCES Workflow(WorkflowID) ON UPDATE CASCADE
+      StatusID INT AUTO_INCREMENT PRIMARY KEY,
+      StatusName VARCHAR(15) NOT NULL UNIQUE,
+      isFinishedStatus BOOLEAN DEFAULT FALSE
 );
+
+CREATE TABLE IF NOT EXISTS Transition (
+    TransitionID INT AUTO_INCREMENT PRIMARY KEY,
+    FromStatus INT NOT NULL,
+    StatusTo INT NOT NULL,
+    ProjectID INT NOT NULL,
+    FOREIGN KEY(FromStatus) REFERENCES TaskStatus(StatusID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY(StatusTo) REFERENCES TaskStatus(StatusID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY(ProjectID) REFERENCES Project(ProjectID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    UNIQUE (FromStatus, StatusTo, ProjectID)
+);
+
 CREATE TABLE IF NOT EXISTS Task (
     TaskID INT AUTO_INCREMENT PRIMARY KEY,
     Title VARCHAR(50) NOT NULL,
-    TaskDescription VARCHAR(255),
+    TaskDescription VARCHAR(500),
     TaskPriority INT DEFAULT 0,
     DueDate TIMESTAMP DEFAULT NULL,
     CreationTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -195,7 +218,7 @@ CREATE TABLE IF NOT EXISTS Comment (
 
 CREATE TABLE IF NOT EXISTS Notification (
     NotificationID INT AUTO_INCREMENT PRIMARY KEY,
-    NotiDescription VARCHAR(255) NOT NULL,
+    NotiDescription VARCHAR(500) NOT NULL,
     CommentID INT,
     TaskID INT NOT NULL,
 
@@ -261,7 +284,7 @@ CREATE TABLE IF NOT EXISTS ProjectRoleActor (
 );
 -- trigger to check the authority of the user when performing action, 
 -- and also to log the action into activity log
--- = private + automatically generated, not allow to insert or update directly
+-- = private + automatically generated, not allow inserting or update directly
 CREATE TABLE IF NOT EXISTS ActivityLog (
     LogID INT AUTO_INCREMENT PRIMARY KEY,
     LogDetail VARCHAR(500) NOT NULL,
@@ -269,8 +292,8 @@ CREATE TABLE IF NOT EXISTS ActivityLog (
     ActionCode VARCHAR(50) NOT NULL, -- nên sửa
     Time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    ProfileID INT NOT NULL, -- -> projecrt role actor
-    -- activy = profileID + (projectroleactor + project role + permission)
+    ProfileID INT NOT NULL, -- -> project role actor
+    -- activity = profileID + (project role actor + project role + permission)
     -- --> result = trigger check authority + log action
     
     TaskID INT NOT NULL,
@@ -279,18 +302,18 @@ CREATE TABLE IF NOT EXISTS ActivityLog (
     FOREIGN KEY (TaskID) REFERENCES Task(TaskID)
         ON UPDATE CASCADE
 );
--- " organization if not doing business like jira plus or pro or businees so it must be
+-- " organization if not doing business like jira plus or pro or businese so it must be
 -- replaced by USERPROFILE because the organization is not the main entity in our system, and also it is not necessary to have organization to use our system,
 -- so we can remove the organization table and replace it with user profile,
 -- and also we can add a field in user profile to indicate whether the user is an admin or not, so that we can manage the permissions of the user based on this field
 --
--- --> solution = use directly user profile as ORGANAZATION AND ALSO ADD A FIELD IN USER PROFILE TO INDICATE WHETHER THE USER IS AN ADMIN OR NOT, SO THAT WE CAN MANAGE THE PERMISSIONS OF THE USER BASED ON THIS FIELD
+-- --> solution = use directly user profile as ORGANIZATION AND ALSO ADD A FIELD IN USER PROFILE TO INDICATE WHETHER THE USER IS AN ADMIN OR NOT, SO THAT WE CAN MANAGE THE PERMISSIONS OF THE USER BASED ON THIS FIELD
 -- "
 --
 -- " TO DO AFTER...: Kiểm tra thứ tự tạo bảng (rất quan trọng)
 -- "
 -- "
--- ✅ How to verify whether a user can perform an action
+-- How to verify whether a user can perform an action
 -- ActivityLog itself should not be the authorization engine.
 -- It is an audit trail: it records what happened after your app allowed or denied the action.
 --
@@ -326,11 +349,11 @@ CREATE TABLE IF NOT EXISTS ActivityLog (
 --  one special thing of  epic is that it can have multi task but
 --  CANT NOT HAVE SUBEPIC itself so we can keep base on this reason"
 --
--- "added countrycode in phone number to support phone number standardization, and also added timezone in user profile to support users from different regions"
+-- "added countrycode in phone number to support phone number standardization, and also added
+-- timezone in user profile to support users from different regions"
 --
--- "Status Catgory removed - cannot determined conceptually,
-
--- and also can be determined by the workflow design, so it is redundant"
+-- "Status Catgory removed - cannot determined conceptually
+-- and also can be determined by the workflow design, so it is redundant
 
 -- %Status VARCHAR(15)
 -- Dùng string tự do → dễ lỗi dữ liệu (active, Active, ACTIVE…)
