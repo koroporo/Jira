@@ -222,6 +222,7 @@ CREATE TABLE IF NOT EXISTS  NotificationReceive(
         ON UPDATE CASCADE,
     FOREIGN KEY (NotificationID) REFERENCES Notification(NotificationID)
         ON UPDATE CASCADE
+        ON DELETE CASCADE
     -- trigger to check the account status of the user, if the account is deactivated, then the user cannot receive notification
 );
 
@@ -284,6 +285,7 @@ CREATE TABLE IF NOT EXISTS ActivityLog (
         ON UPDATE CASCADE,
     FOREIGN KEY (TaskID) REFERENCES Task(TaskID)
         ON UPDATE CASCADE
+        ON DELETE CASCADE
 );
 -- " organization if not doing business like jira plus or pro or businese so it must be
 -- replaced by USERPROFILE because the organization is not the main entity in our system, and also it is not necessary to have organization to use our system,
