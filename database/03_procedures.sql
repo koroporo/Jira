@@ -335,7 +335,7 @@ BEGIN
         WHERE  c.TaskID = p_TaskID
     ) AND p_ForceDelete = 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Deletion not allowed: this task has unread notifications linked to its comments. Resolve all notifications before deleting.';
+            SET MESSAGE_TEXT = 'Deletion not allowed: this task has notifications linked to its comments. Resolve or remove the linked notifications before deleting.';
     END IF;
 
     DELETE FROM Task WHERE TaskID = p_TaskID;
