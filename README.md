@@ -8,33 +8,6 @@ Scripts must be executed in the following order to handle foreign key dependenci
 * **database/03_procedures.sql**: Stored procedures for Insert, Update, and Delete operations with built-in data validation[cite: 16, 18, 19].
 * **database/04_triggers.sql**: Implementation of triggers for business constraints and derived attribute calculations[cite: 24, 25, 29].
 * **database/05_functions.sql**: Functions containing IF/LOOP statements and Cursors for complex computations[cite: 44, 46, 47].
-└── koroporo-jira/
-    ├── database/                # (Đã có) Chứa các file SQL logic
-    ├── src/                     # Thư mục mã nguồn chính
-    │   ├── main.py              # File chạy chính, khai báo FastAPI app
-    │   ├── core/                # Cấu hình hệ thống
-    │   │   └── config.py        # Đọc biến môi trường từ .env (DB_PASSWORD, DB_NAME)
-    │   ├── db/                  # Tầng kết nối Database
-    │   │   ├── session.py       # Quản lý Connection Pool đến MySQL
-    │   │   └── base.py          # Chứa các hàm thực thi gọi Stored Procedure
-    │   ├── schemas/             # Pydantic models để validate dữ liệu API
-    │   │   ├── task.py          # Schema cho Task (Title, Priority, DueDate...)
-    │   │   └── user.py          # Schema cho User và Profile[cite: 1]
-    │   ├── crud/                # Logic gọi Procedure (Xử lý nghiệp vụ chính)
-    │   │   ├── crud_task.py     # Gọi sp_create_task, sp_update_task...[cite: 1]
-    │   │   └── crud_user.py     # Xử lý login, profile[cite: 1]
-    │   ├── api/                 # Tầng định tuyến (Routing)
-    │   │   ├── endpoints/       
-    │   │   │   ├── tasks.py     # API cho task
-    │   │   │   └── users.py     # API cho user
-    │   │   └── api_router.py    # Gộp tất cả router lại
-    │   └── static/              # Giao diện (Frontend)
-    │       ├── index.html       # UI chính (Prompt-generated)[cite: 1]
-    │       └── script.js        # Logic gọi API từ trình duyệt[cite: 1]
-    ├── .env                     # Lưu thông tin nhạy cảm (User, Password)[cite: 1]
-    ├── docker-compose.yml       # (Đã có) Cấu hình Docker cho MySQL[cite: 1]
-    └── requirements.txt         # Danh sách thư viện (fastapi, uvicorn, mysql-connector)[cite: 1]
----
 
 ## 📝 Critical Development Rules
 
