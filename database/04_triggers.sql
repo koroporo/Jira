@@ -195,12 +195,41 @@ BEGIN
 
     -- Store: salt (16 chars) + SHA256 hash (64 chars) = 80 chars total
     -- Formula: salt + SHA256(salt + raw_password)
-    SET NEW.PasswordHash = CONCAT(
-        salt,
-        SHA2(CONCAT(salt, NEW.PasswordHash), 256)
-    );
+    SET NEW.PasswordHash = SHA2(CONCAT(salt, NEW.PasswordHash), 256);
 
     -- 16 predefined salt chars + 64 hash chars = 80 total, fits in VARCHAR(255)
+END$$
+
+DELIMITER ;
+
+
+
+
+
+-- ============================================================
+-- TRIGGER 3: Maintain a Summary Table (TotalTasks in Project)
+-- ============================================================
+
+DELIMITER $$
+
+-- Trigger 2.1: TASK++
+CREATE TRIGGER trg_AfterInsertTask
+AFTER INSERT ON Task
+FOR EACH ROW
+BEGIN
+    UPDATE Project 
+    SET TotalTasks = TotalTasks + 1 
+    WHERE ProjectID = NEW.ProjectID;
+END$$
+
+-- Trigger 2.2:TASK--
+CREATE TRIGGER trg_AfterDeleteTask
+AFTER DELETE ON Task
+FOR EACH ROW
+BEGIN
+    UPDATE Project 
+    SET TotalTasks = TotalTasks - 1 
+    WHERE ProjectID = OLD.ProjectID;
 END$$
 
 DELIMITER ;

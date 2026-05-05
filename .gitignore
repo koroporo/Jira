@@ -1,12 +1,43 @@
-# IntelliJ
-.idea/
-*.iml
-out/
-gen/
-
-# VS Code
-.vscode/
-
-# Database & Environment
+# --- Security & Environment ---
+# Chặn file chứa mật khẩu thật, mỗi người tự giữ file .env riêng trên máy
 .env
-*.db
+
+# --- Python ---
+# Chặn các file biên dịch của Python (sinh ra khi chạy app)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Chặn môi trường ảo (Virtual Environment) vì mỗi OS có cấu trúc venv khác nhau
+venv/
+env/
+ENV/
+.venv/
+
+# --- OS Specific ---
+# Chặn file rác của macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Chặn file rác của Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+
+# --- IDEs & Editors ---
+# Chặn cấu hình riêng của VS Code hoặc PyCharm
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Docker ---
+# Chặn dữ liệu database được map ra ngoài (nếu có cấu hình volume cục bộ)[cite: 1]
+mysql_data/
+
+# --- Project Specific ---
+# Chặn các file log sinh ra trong quá trình chạy app[cite: 1]
+*.log

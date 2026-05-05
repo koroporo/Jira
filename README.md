@@ -1,14 +1,4 @@
-## 🚀 Setup Instructions
 
-### 1. Prerequisites
-* Install **Docker** and **Docker Desktop** (for Windows).
-* Install **Git**.
-
-### 2. Launch Database
-Open your terminal/PowerShell in the project root and run:
-```bash
-docker-compose up -d
-```
 
 ### 3. SQL Script Structure (Part 1 & 2)
 Scripts must be executed in the following order to handle foreign key dependencies and satisfy assignment requirements[cite: 8, 35]:
@@ -18,8 +8,6 @@ Scripts must be executed in the following order to handle foreign key dependenci
 * **database/03_procedures.sql**: Stored procedures for Insert, Update, and Delete operations with built-in data validation[cite: 16, 18, 19].
 * **database/04_triggers.sql**: Implementation of triggers for business constraints and derived attribute calculations[cite: 24, 25, 29].
 * **database/05_functions.sql**: Functions containing IF/LOOP statements and Cursors for complex computations[cite: 44, 46, 47].
-
----
 
 ## 📝 Critical Development Rules
 
@@ -44,7 +32,4 @@ Scripts must be executed in the following order to handle foreign key dependenci
 
 ---
 
-## ⚠️ Git Guidelines
-* **Ignore Environment Files**: Add `.env`, `.idea/`, and `.vscode/` to your `.gitignore` to avoid environment conflicts between IntelliJ and VS Code.
-* **Sync Database Changes**: Always commit changes in the `database/` folder so teammates on different OS (Ubuntu/Windows) can update their local Docker containers.
-* [cite_start]**Individual Contribution**: Every member must write at least one SQL statement (trigger, function, or procedure) to receive a score[cite: 59, 60].
+
