@@ -1,3 +1,27 @@
+SET FOREIGN_KEY_CHECKS = 0; -- Turn off dependency checks temporarily
+
+TRUNCATE TABLE ActivityLog;
+TRUNCATE TABLE ProjectRoleActor;
+TRUNCATE TABLE RolePermission;
+TRUNCATE TABLE ProjectRole;
+TRUNCATE TABLE Permission;
+TRUNCATE TABLE NotificationReceive;
+TRUNCATE TABLE Notification;
+TRUNCATE TABLE Comment;
+TRUNCATE TABLE LinkedItem;
+TRUNCATE TABLE Epic;
+TRUNCATE TABLE Bug;
+TRUNCATE TABLE Story;
+TRUNCATE TABLE Task;
+TRUNCATE TABLE Transition;
+TRUNCATE TABLE TaskStatus;
+TRUNCATE TABLE Milestone;
+TRUNCATE TABLE Project;
+TRUNCATE TABLE PhoneNumber;
+TRUNCATE TABLE UserProfile;
+TRUNCATE TABLE UserAccount;
+
+SET FOREIGN_KEY_CHECKS = 1; -- Turn the dependency checks back on
 -- ============================================================
 -- Assignment 2 – Part 2: Sample Data
 -- Database Systems – Semester 2, 2025-2026
@@ -258,114 +282,90 @@ VALUES
 
     ('Product ready to be released', 'Production-ready build finalized and approved for deployment', NULL, NULL);
 
--- ============================================================
--- 9. Board
--- ============================================================
-INSERT INTO Board (BoardName, BoardType, CreatorID, ProjectID)
-VALUES
-    ('Main Board', 'Kanban', 1, 1),
-    ('Marketing Board', 'Kanban', 1, 2),
-    ('HR Board', 'Kanban', 1, 3),
-    ('Mobile Dev Board', 'Scrum', 1, 4),
-    ('QA Board', 'Kanban', 2, 5);
+-- -- ============================================================
+-- -- 9. Board
+-- -- ============================================================
+-- INSERT INTO Board (BoardName, BoardType, CreatorID, ProjectID)
+-- VALUES
+--     ('Main Board', 'Kanban', 1, 1),
+--     ('Marketing Board', 'Kanban', 1, 2),
+--     ('HR Board', 'Kanban', 1, 3),
+--     ('Mobile Dev Board', 'Scrum', 1, 4),
+--     ('QA Board', 'Kanban', 2, 5);
 
 -- ============================================================
 -- 10. Task (Base Tasks and Epic Parent Tasks)
 -- ============================================================
 INSERT INTO Task (
     Title, TaskDescription, TaskPriority, DueDate,
-    StatusID, MilestoneID, ReporterID, AssigneeID, BoardID
+    StatusID, MilestoneID, ReporterID, AssigneeID, ProjectID -- <--- ADDED ProjectID HERE
 )
 VALUES
     -- ============================================================
-    -- EPIC PARENT TASKS (3 parent tasks for Epic classification)
+    -- EPIC PARENT TASKS
     -- ============================================================
     -- Epic 1:
     ('Epic: Backend Services & Payment Integration',
      'High-level initiative to develop core backend services including authentication, payment processing, and order management. This epic encompasses multiple stories related to secure API development and third-party integrations.',
-     3,
-     '2026-06-20',
-     4, 4, 1, 3, 1),  -- TaskID 1, StatusID 4 = Done
+     3, '2026-06-20', 4, 4, 1, 3, 1),  -- ProjectID 1
 
     -- Epic 2:
     ('Epic: Frontend Development & User Interface',
      'Complete user-facing interface development including responsive design, component library, and interactive features. Encompasses all design and frontend implementation work.',
-     3,
-     '2026-05-28',
-     2, 3, 1, 2, 1),  -- TaskID 2, StatusID 2 = In Progress
+     3, '2026-05-28', 2, 3, 1, 2, 1),  -- ProjectID 1
 
     -- Epic 3:
     ('Epic: Quality Assurance & System Testing',
      'Comprehensive testing strategy including unit tests, integration tests, and end-to-end testing. Ensures product quality before production release.',
-     2,
-     '2026-06-30',
-     2, 5, 1, 3, 5),  -- TaskID 3, StatusID 2 = In Progress
+     2, '2026-06-30', 2, 5, 1, 3, 5),  -- ProjectID 5
 
     -- ============================================================
-    -- STORY TASKS (7 child stories linked to epics via ParentTaskID)
+    -- STORY TASKS
     -- ============================================================
     -- Story 1: Set up project repository
     ('Set up project repository',
      'Initialize Git repository and basic project structure.',
-     0,
-     '2026-02-02',
-     3, 1, 1, 2, 1),  -- TaskID 4, ParentTaskID = 1 (set via UPDATE)
+     0, '2026-02-02', 3, 1, 1, 2, 1),  -- ProjectID 1
 
     -- Story 2: Plan marketing campaign
     ('Plan marketing campaign',
      'Define campaign objectives, analyze competitors, and align with budget.',
-     1,
-     '2026-02-03',
-     2, 1, 1, 3, 2),  -- TaskID 5, ParentTaskID = 2
+     1, '2026-02-03', 2, 1, 1, 3, 2),  -- ProjectID 2
 
     -- Story 3:
     ('Gather user requirements',
      'Interview stakeholders and collect functional and non-functional requirements.',
-     3,
-     '2026-02-08',
-     2, 2, 1, 3, 1),  -- TaskID 6 (not part of epic)
+     3, '2026-02-08', 2, 2, 1, 3, 1),  -- ProjectID 1
 
     -- Story 4:
     ('Write SRS document',
      'Compile requirements into a Software Requirements Specification document.',
-     3,
-     '2026-02-14',
-     2, 2, 1, 2, 1),  -- TaskID 7 (not part of epic)
+     3, '2026-02-14', 2, 2, 1, 2, 1),  -- ProjectID 1
 
     -- Story 5:
     ('Design student interface',
      'Create UI mockups in Figma for dashboard and navigation.',
-     3,
-     '2026-05-25',
-     1, 3, 1, 2, 1),  -- TaskID 8, ParentTaskID = 2
+     3, '2026-05-25', 1, 3, 1, 2, 1),  -- ProjectID 1
 
     -- Story 6:
     ('Design high-fidelity UI',
      'Produce final UI with components and responsive layouts.',
-     3,
-     '2026-05-27',
-     2, 3, 1, 2, 1),  -- TaskID 9, ParentTaskID = 2
+     3, '2026-05-27', 2, 3, 1, 2, 1),  -- ProjectID 1
 
     -- Story 7:
     ('Implement authentication module',
      'Develop login, registration, and JWT-based authentication.',
-     3,
-     '2026-06-05',
-     1, 4, 1, 3, 4),  -- TaskID 10, ParentTaskID = 1
+     3, '2026-06-05', 1, 4, 1, 3, 4),  -- ProjectID 4
 
     -- Story 8:
     ('Implement payment module',
      'Develop payment feature based on technical specification.',
-     3,
-     '2026-06-26',
-     1, 4, 3, 2, 4),  -- TaskID 11, ParentTaskID = 1
+     3, '2026-06-26', 1, 4, 3, 2, 4),  -- ProjectID 4
 
     -- Story 9:
     ('Write test cases',
      'Prepare unit and integration test cases.',
-     2,
-     '2026-06-24',
-     1, 5, 1, 3, 5),  -- TaskID 12, ParentTaskID = 3
+     2, '2026-06-24', 1, 5, 1, 3, 5),  -- ProjectID 5
 
     -- ============================================================
     -- BUG TASK
@@ -373,19 +373,14 @@ VALUES
     -- Bug 1:
     ('[URGENT] Fix server error',
      'A new bug appeared on the server. Need to fix this ASAP.',
-     3,
-     '2026-06-28',
-     2, 5, 1, 3, 5),  -- TaskID 13, ParentTaskID = 3
+     3, '2026-06-28', 2, 5, 1, 3, 5),  -- ProjectID 5
 
     -- ============================================================
-    -- REGULAR TASK (not classified as Story/Bug/Epic)
+    -- REGULAR TASK
     -- ============================================================
-    --
     ('Prepare requirements specification',
      'Schedule meetings and refine requirements documentation.',
-     2,
-     '2026-05-15',
-     2, 6, 1, 3, 1);  -- TaskID 14 (unclassified)
+     2, '2026-05-15', 2, 6, 1, 3, 1);  -- ProjectID 1
 
 -- ============================================================
 -- UPDATE: Link Stories to their Epic Parents
@@ -474,18 +469,17 @@ VALUES
 -- ============================================================
 -- 15. Permission
 -- ============================================================
-INSERT INTO Permission (ResourceType, ActionCode, Scope)
+INSERT INTO Permission (ActionCode)
 VALUES
-    ('Task', 'Create', 'Project'),
-    ('Task', 'Edit', 'Project'),
-    ('Task', 'Delete', 'Project'),
-    ('Task', 'View', 'Project'),
-    ('Comment', 'Create', 'Project'),
-    ('Comment', 'Edit', 'Project'),
-    ('Comment', 'Delete', 'Project'),
-    ('Project', 'Edit', 'Project'),
-    ('Board', 'Edit', 'Project');
-
+    ('Task_Create'),
+    ('Task_Edit'),
+    ('Task_Delete'),
+    ('Task_View'),
+    ('Comment_Create'),
+    ('Comment_Edit'),
+    ('Comment_Delete'),
+    ('Project_Edit'),
+    ('Board_Edit');
 -- ============================================================
 -- 16. RolePermission
 -- ============================================================
@@ -500,14 +494,14 @@ VALUES
 -- ============================================================
 -- 17. ProjectRoleActor
 -- ============================================================
-INSERT INTO ProjectRoleActor (RoleID, ProfileID)
+INSERT INTO ProjectRoleActor (RoleID, ProfileID, MemberState)
 VALUES
-    (1, 1), -- Alex Carter is Project Manager
-    (2, 3), -- Taylor Nguyen is Backend Developer
-    (3, 2), -- Sam Lee is Frontend Developer
-    (4, 4), -- Jordan Pham is Graphic Designer
-    (5, 5), -- Casey Tran is QA Engineer
-    (6, 4); -- Jordan Pham is Marketing Specialist
+    (1, 1, 'Active'), -- Alex Carter is Project Manager
+    (2, 3, 'Active'), -- Taylor Nguyen is Backend Developer
+    (3, 2, 'Active'), -- Sam Lee is Frontend Developer
+    (4, 4, 'Active'), -- Jordan Pham is Graphic Designer
+    (5, 5, 'Active'), -- Casey Tran is QA Engineer
+    (6, 4, 'Active'); -- Jordan Pham is Marketing Specialist
 
 -- ============================================================
 -- 18. ActivityLog
