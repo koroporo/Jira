@@ -212,7 +212,7 @@ BEGIN
 
     -- 7. Assignee must exist (if being changed); -1 = clear assignee
     IF v_AssigneeID IS NOT NULL AND v_AssigneeID != -1 THEN
-        CALL sp_assert_profile_exists(v_AssigneeID, 'Assignee');
+        CALL sp_assert_profile_exists(v_AssigneeID);
     END IF;
 
     -- All checks passed → UPDATE only changed fields
