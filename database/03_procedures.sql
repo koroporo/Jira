@@ -36,13 +36,11 @@ CREATE PROCEDURE sp_create_task(
     IN  p_MilestoneID   INT,            -- NULL allowed
     IN  p_ReporterID    INT,            -- must be an existing profile
     IN  p_AssigneeID    INT,            -- NULL allowed; if set must be an existing profile
-    IN  p_BoardID       INT,            -- NULL allowed
     OUT p_NewTaskID     INT
 )
 BEGIN
     DECLARE v_status_exists    TINYINT DEFAULT 0;
     DECLARE v_milestone_exists TINYINT DEFAULT 0;
-    DECLARE v_board_project_id INT;
  
     -- 1. Title must not be blank
     IF p_Title IS NULL OR CHAR_LENGTH(TRIM(p_Title)) = 0 THEN
@@ -94,19 +92,6 @@ BEGIN
         END IF;
     END IF;
  
-    -- 8. BoardID must exist (if provided)
-    IF p_BoardID IS NOT NULL THEN
-        SELECT ProjectID INTO v_board_project_id
-        FROM   Board
-        WHERE  BoardID = p_BoardID
-        LIMIT  1;
- 
-        IF v_board_project_id IS NULL THEN
-            SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'The provided BoardID does not exist.';
-        END IF;
-    END IF;
- 
     -- All checks passed → INSERT
     INSERT INTO Task (
         Title, TaskDescription, TaskPriority,
@@ -151,7 +136,6 @@ BEGIN
     DECLARE v_StatusID    INT          DEFAULT JSON_EXTRACT(p_data, '$.status_id');
     DECLARE v_MilestoneID INT          DEFAULT JSON_EXTRACT(p_data, '$.milestone_id');
     DECLARE v_AssigneeID  INT          DEFAULT JSON_EXTRACT(p_data, '$.assignee_id');
-    DECLARE v_BoardID     INT          DEFAULT JSON_EXTRACT(p_data, '$.board_id');
 
     -- 1. Task must exist
     SELECT COUNT(*) INTO v_exists FROM Task WHERE TaskID = p_TaskID;
@@ -229,14 +213,6 @@ BEGIN
     -- 7. Assignee must exist (if being changed); -1 = clear assignee
     IF v_AssigneeID IS NOT NULL AND v_AssigneeID != -1 THEN
         CALL sp_assert_profile_exists(v_AssigneeID);
-    END IF;
-
-    -- 8. BoardID must exist (if being changed)
-    IF v_BoardID IS NOT NULL THEN
-        IF NOT EXISTS (SELECT 1 FROM Board WHERE BoardID = v_BoardID) THEN
-            SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'BoardID does not exist.';
-        END IF;
     END IF;
 
     -- All checks passed → UPDATE only changed fields
@@ -348,7 +324,7 @@ DELIMITER ;
 -- ============================================================
 -- Test Insert: valid task
 CALL sp_create_task('Fix login bug', 'Users cannot log in on mobile', 3,
-'2026-12-31 00:00:00', NULL, 1, NULL, 1, 2, 1, @new_id);
+'2026-12-31 00:00:00', NULL, 1, NULL, 1, 2, @new_id);
 SELECT @new_id;
 CALL sp_update_task(1, '{"priority": 4, "assignee_id": 3}');
 -- Test Insert: blank title → should error
