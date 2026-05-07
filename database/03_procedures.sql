@@ -173,7 +173,7 @@ BEGIN
                 SET MESSAGE_TEXT = 'StatusID does not exist in TaskStatus.';
         END IF;
 
-        SELECT t.StatusID, b.ProjectID
+        SELECT t.StatusID, t.ProjectID
         INTO   v_current_status, v_project_id
         FROM   Task t
         WHERE  t.TaskID = p_TaskID;
@@ -231,7 +231,7 @@ BEGIN
                             WHEN v_AssigneeID = -1        THEN NULL
                             WHEN v_AssigneeID IS NOT NULL THEN v_AssigneeID
                             ELSE AssigneeID
-                          END,
+                          END
     WHERE TaskID = p_TaskID;
 END$$
 DELIMITER ;
