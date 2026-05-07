@@ -1,8 +1,5 @@
-export FLASK_APP=microblog.py
-
 --Thanh Phu
 DELIMITER $$
-
 -- Prevent inserting into Epic if already in Story or Bug
 CREATE TRIGGER prevent_duplicate_type_epic
 BEFORE INSERT ON Epic
@@ -38,12 +35,7 @@ BEGIN
         SET MESSAGE_TEXT = 'Task already has a type (Epic or Story). Cannot also be Bug.';
     END IF;
 END$$
-
 DELIMITER ;
-
-
-
-
 
 -- ============================================================
 -- TRIGGER 1: Complex Business Constraint (Jira-Style)
@@ -55,7 +47,6 @@ DELIMITER ;
 -- ============================================================
  
 DELIMITER $$
- 
 CREATE TRIGGER check_task_hierarchy_jira_after_insert
 AFTER INSERT ON Task
 FOR EACH ROW
@@ -166,13 +157,8 @@ BEGIN
         END CASE;
     END IF;
 END$$
- 
 DELIMITER ;
  
-
-
-
-
 -- ============================================================
 -- TRIGGER 2: Calculate a Derived Attribute
 -- Automatically hashes password with salt before storing
@@ -199,12 +185,7 @@ BEGIN
 
     -- 16 predefined salt chars + 64 hash chars = 80 total, fits in VARCHAR(255)
 END$$
-
 DELIMITER ;
-
-
-
-
 
 -- ============================================================
 -- TRIGGER 3: Maintain a Summary Table (TotalTasks in Project)

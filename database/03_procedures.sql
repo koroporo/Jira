@@ -49,9 +49,9 @@ BEGIN
     END IF;
  
     -- 2. Priority range check
-    IF p_Priority IS NOT NULL AND p_Priority NOT IN (0, 1, 2, 3, 4) THEN
+    IF p_Priority IS NOT NULL THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Task priority must be 0 (None), 1 (Low), 2 (Medium), 3 (High), or 4 (Critical).';
+            SET MESSAGE_TEXT = 'Task priority must not be empty.';
     END IF;
  
     -- 3. DueDate must not be in the past
@@ -151,9 +151,9 @@ BEGIN
     END IF;
 
     -- 3. Priority range (if being changed)
-    IF v_Priority IS NOT NULL AND v_Priority NOT IN (0, 1, 2, 3, 4) THEN
+    IF p_Priority IS NOT NULL THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Task priority must be 0 (None), 1 (Low), 2 (Medium), 3 (High), or 4 (Critical).';
+            SET MESSAGE_TEXT = 'Task priority must not be empty.';
     END IF;
 
     -- 4. DueDate must not be in the past (if being changed)
@@ -176,7 +176,6 @@ BEGIN
         SELECT t.StatusID, b.ProjectID
         INTO   v_current_status, v_project_id
         FROM   Task t
-        LEFT JOIN Board b ON b.BoardID = t.BoardID
         WHERE  t.TaskID = p_TaskID;
 
         IF v_current_status IS NULL THEN
@@ -233,7 +232,6 @@ BEGIN
                             WHEN v_AssigneeID IS NOT NULL THEN v_AssigneeID
                             ELSE AssigneeID
                           END,
-        BoardID         = COALESCE(v_BoardID, BoardID)
     WHERE TaskID = p_TaskID;
 END$$
 DELIMITER ;
@@ -319,33 +317,87 @@ BEGIN
 END$$
 DELIMITER ;
 
--- ============================================================
--- QUICK SMOKE-TEST CALLS
--- ============================================================
--- Test Insert: valid task
-CALL sp_create_task('Fix login bug', 'Users cannot log in on mobile', 3,
-'2026-12-31 00:00:00', NULL, 1, NULL, 1, 2, @new_id);
-SELECT @new_id;
-CALL sp_update_task(1, '{"priority": 4, "assignee_id": 3}');
--- Test Insert: blank title → should error
--- CALL sp_create_task('', NULL, 0, NULL, NULL, 1, NULL, 1, NULL, NULL, @new_id);
+DROP PROCEDURE IF EXISTS sp_get_task_list_detailed;
+DELIMITER $$
+CREATE PROCEDURE sp_get_task_list_detailed(
+    IN p_ProjectID INT,
+    IN p_StatusID INT
+)
+BEGIN
+    SELECT 
+        t.TaskID, 
+        t.Title, 
+        t.TaskPriority, 
+        t.DueDate,
+        p.ProjectName,
+        CONCAT(u.FirstName, ' ', u.LastName) AS AssigneeName,
+        ts.StatusName
+    FROM Task t
+    INNER JOIN Project p ON t.ProjectID = p.ProjectID
+    INNER JOIN TaskStatus ts ON t.StatusID = ts.StatusID
+    LEFT JOIN UserProfile u ON t.AssigneeID = u.ProfileID
+    WHERE (p_ProjectID IS NULL OR t.ProjectID = p_ProjectID)
+      AND (p_StatusID IS NULL OR t.StatusID = p_StatusID)
+    ORDER BY t.TaskPriority DESC, t.DueDate ASC;
+END$$
+DELIMITER ;
 
--- Test Insert: past due date → should error
--- CALL sp_create_task('Old task', NULL, 1, '2020-01-01 00:00:00',
--- NULL, 1, NULL, 1, NULL, NULL, @new_id);
+DROP PROCEDURE IF EXISTS sp_report_assignee_performance;
+DELIMITER $$
+CREATE PROCEDURE sp_report_assignee_performance(
+    IN p_ProjectID INT,
+    IN p_MinTasks INT
+)
+BEGIN
+    SELECT 
+        CONCAT(u.FirstName, ' ', u.LastName) AS StaffName,
+        COUNT(t.TaskID) AS TotalTasksAssigned,
+        SUM(CASE WHEN ts.isFinishedStatus = 1 THEN 1 ELSE 0 END) AS CompletedTasks,
+        p.ProjectName
+    FROM UserProfile u
+    INNER JOIN Task t ON u.ProfileID = t.AssigneeID
+    INNER JOIN Project p ON t.ProjectID = p.ProjectID
+    INNER JOIN TaskStatus ts ON t.StatusID = ts.StatusID
+    WHERE t.ProjectID = p_ProjectID
+    GROUP BY u.ProfileID, p.ProjectName
+    HAVING COUNT(t.TaskID) >= COALESCE(p_MinTasks, 0)
+    ORDER BY TotalTasksAssigned DESC;
+END$$
+DELIMITER ;
 
--- Test Update: change priority and assignee
--- CALL sp_update_task(1, NULL, NULL, 4, NULL, NULL, NULL, 3, NULL);
+--
+DROP PROCEDURE IF EXISTS sp_get_task_by_id;
+DELIMITER $$
+CREATE PROCEDURE sp_get_task_by_id(IN p_TaskID INT)
+BEGIN
+    SELECT * FROM Task WHERE TaskID = p_TaskID;
+END$$
+DELIMITER ;
 
--- Test Delete: task with active children → should error (force=0)
--- CALL sp_delete_task(1, 0);
+DROP PROCEDURE IF EXISTS sp_get_staff_dashboard;
+DELIMITER $$
+CREATE PROCEDURE sp_get_staff_dashboard(IN p_ProfileID INT)
+BEGIN
+    SELECT
+        u.ProfileID,
+        CONCAT(u.FirstName, ' ', u.LastName) AS FullName,
+        num_of_overdue_task(u.ProfileID) AS OverdueCount,
+        u.AccountStatus
+    FROM UserProfile u
+    WHERE u.ProfileID = p_ProfileID;
+END$$
+DELIMITER ;
 
--- Test Delete: force delete
--- CALL sp_delete_task(1,1);
-
--- Test Delete: Force Delete (have child task)
--- INSERT INTO Task (Title, TaskDescription, TaskPriority, StatusID, ReporterID)
--- VALUES ('Test Parent Task', 'Parent for delete test', 0, 1, 1);
--- INSERT INTO Task (Title, TaskDescription, TaskPriority, StatusID, ReporterID, ParentTaskID)
--- VALUES ('Test Child Task', 'Active child - blocks delete', 0, 1, 1, LAST_INSERT_ID());
--- CALL sp_delete_task((SELECT TaskID FROM Task WHERE Title = 'Test Parent Task'), 1);
+DROP PROCEDURE IF EXISTS sp_get_milestones_report;
+DELIMITER $$
+CREATE PROCEDURE sp_get_milestones_report()
+BEGIN
+    SELECT
+        MilestoneID,
+        MilestoneName,
+        calculate_milestone_progress(MilestoneID) AS Progress,
+        EndDate
+    FROM Milestone
+    ORDER BY EndDate ASC;
+END$$
+DELIMITER ;
