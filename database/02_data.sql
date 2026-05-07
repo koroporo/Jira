@@ -380,7 +380,47 @@ VALUES
     -- ============================================================
     ('Prepare requirements specification',
      'Schedule meetings and refine requirements documentation.',
-     2, '2026-05-15', 2, 6, 1, 3, 1);  -- ProjectID 1
+     2, '2026-05-15', 2, 6, 1, 3, 1),  -- ProjectID 1
+
+    -- Epic 4:
+    ('Epic: Security and Compliance',
+     'Ensure all security measures and regulatory compliance for the mobile banking app.',
+     3, '2026-10-15', 1, NULL, 1, 4, 4),  -- ProjectID 4
+
+    -- Epic 5:
+    ('Epic: Campaign Execution and Analytics',
+     'Execute the marketing campaign and track performance metrics.',
+     2, '2026-04-30', 1, NULL, 1, 6, 2),  -- ProjectID 2
+
+    -- Story 14:
+    ('Implement user dashboard',
+     'Create a user dashboard for account overview.',
+     2, '2026-07-10', 1, 3, 1, 3, 4),  -- ProjectID 4
+
+    -- Story 15:
+    ('Set up analytics tracking',
+     'Integrate Google Analytics for campaign tracking.',
+     1, '2026-03-15', 1, 2, 1, 6, 2),  -- ProjectID 2
+
+    -- Bug 2:
+    ('[BUG] Payment gateway timeout',
+     'Payment processing times out intermittently.',
+     3, '2026-06-15', 2, 4, 1, 4, 1),  -- ProjectID 1
+
+    -- Bug 3:
+    ('[BUG] UI button not clickable',
+     'Submit button on form is not responding to clicks.',
+     2, '2026-05-25', 2, 2, 1, 3, 1),  -- ProjectID 1
+
+    -- Bug 4:
+    ('[BUG] Database connection error',
+     'Application fails to connect to database under load.',
+     3, '2026-06-10', 2, 5, 1, 4, 4),  -- ProjectID 4
+
+    -- Bug 5:
+    ('[BUG] Email notifications not sent',
+     'Users not receiving email notifications for updates.',
+     2, '2026-04-20', 2, 6, 1, 1, 2);  -- ProjectID 2
 
 -- ============================================================
 -- UPDATE: Link Stories to their Epic Parents
@@ -388,6 +428,12 @@ VALUES
 UPDATE Task SET ParentTaskID = 1 WHERE TaskID IN (4, 10, 11);     -- Link to Epic 1 (Backend)
 UPDATE Task SET ParentTaskID = 2 WHERE TaskID IN (5, 8, 9);     -- Link to Epic 2 (Frontend)
 UPDATE Task SET ParentTaskID = 3 WHERE TaskID IN (12, 13);       -- Link to Epic 3 (QA)
+UPDATE Task SET ParentTaskID = 15 WHERE TaskID IN (17);          -- Link Story 14 to Epic 4
+UPDATE Task SET ParentTaskID = 16 WHERE TaskID IN (18);          -- Link Story 15 to Epic 5
+UPDATE Task SET ParentTaskID = 1 WHERE TaskID IN (19);           -- Link Bug 2 to Epic 1
+UPDATE Task SET ParentTaskID = 2 WHERE TaskID IN (20);           -- Link Bug 3 to Epic 2
+UPDATE Task SET ParentTaskID = 15 WHERE TaskID IN (21);          -- Link Bug 4 to Epic 4
+UPDATE Task SET ParentTaskID = 16 WHERE TaskID IN (22);          -- Link Bug 5 to Epic 5
 
 -- ============================================================
 -- 11. LinkedItem
@@ -523,7 +569,9 @@ INSERT INTO Epic (TaskID, Goal)
 VALUES
     (1, 'Deliver robust backend services with secure authentication and payment processing capabilities'),
     (2, 'Create modern, responsive UI that meets accessibility standards and user experience requirements'),
-    (3, 'Achieve 95% test coverage and zero critical bugs before production deployment');
+    (3, 'Achieve 95% test coverage and zero critical bugs before production deployment'),
+    (15, 'Implement comprehensive security protocols and ensure compliance with banking regulations'),
+    (16, 'Successfully execute marketing campaign and provide detailed analytics reporting');
 
 -- ============================================================
 -- 20. Story
@@ -536,14 +584,20 @@ VALUES
     (9, 13),  -- Design high-fidelity UI (13 points - complex visual design)
     (10, 13),  -- Implement authentication module (13 points - critical security work)
     (11, 21),  -- Implement payment module (21 points - high complexity integration)
-    (12, 8);   -- Write test cases (8 points - comprehensive test coverage)
+    (12, 8),   -- Write test cases (8 points - comprehensive test coverage)
+    (17, 8),   -- Implement user dashboard (8 points)
+    (18, 5);   -- Set up analytics tracking (5 points)
 
 -- ============================================================
 -- 21. Bug
 -- ============================================================
 INSERT INTO Bug (TaskID, Severity)
 VALUES
-    (13, 5);  -- [URGENT] Fix server error (5 = Critical/Blocker severity)
+    (13, 5),  -- [URGENT] Fix server error (5 = Critical/Blocker severity)
+    (19, 4),  -- Payment gateway timeout (4 = High)
+    (20, 3),  -- UI button not clickable (3 = Medium)
+    (21, 4),  -- Database connection error (4 = High)
+    (22, 2);  -- Email notifications not sent (2 = Low)
 
 -- ============================================================
 -- END OF DATA INSERTION
