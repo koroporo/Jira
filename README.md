@@ -12,7 +12,7 @@ pip install -r requirements.txt
 3.
 
 cd /workspaces/Jira/src
-PYTHONPATH=/workspaces/Jira/src uvicorn main:app --reload
+PYTHONPATH=/workspaces/Jira/src python3 -m uvicorn main:app --reload
 
 4. On the right corner sẽ xuất hiện host tại 8000. Nhấn vào đó để xem
 
