@@ -2,6 +2,7 @@
 1. Start the database
 
 cd /workspaces/Jira
+
 docker-compose up -d
 
 2. Install dependencies
