@@ -349,3 +349,51 @@ CALL sp_update_task(1, '{"priority": 4, "assignee_id": 3}');
 -- INSERT INTO Task (Title, TaskDescription, TaskPriority, StatusID, ReporterID, ParentTaskID)
 -- VALUES ('Test Child Task', 'Active child - blocks delete', 0, 1, 1, LAST_INSERT_ID());
 -- CALL sp_delete_task((SELECT TaskID FROM Task WHERE Title = 'Test Parent Task'), 1);
+
+DROP PROCEDURE IF EXISTS sp_get_task_list_detailed;
+DELIMITER $$
+CREATE PROCEDURE sp_get_task_list_detailed(
+    IN p_ProjectID INT,
+    IN p_StatusID INT
+)
+BEGIN
+    SELECT 
+        t.TaskID, 
+        t.Title, 
+        t.TaskPriority, 
+        t.DueDate,
+        p.ProjectName,
+        CONCAT(u.FirstName, ' ', u.LastName) AS AssigneeName,
+        ts.StatusName
+    FROM Task t
+    INNER JOIN Project p ON t.ProjectID = p.ProjectID
+    INNER JOIN TaskStatus ts ON t.StatusID = ts.StatusID
+    LEFT JOIN UserProfile u ON t.AssigneeID = u.ProfileID
+    WHERE (p_ProjectID IS NULL OR t.ProjectID = p_ProjectID)
+      AND (p_StatusID IS NULL OR t.StatusID = p_StatusID)
+    ORDER BY t.TaskPriority DESC, t.DueDate ASC;
+END$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_report_assignee_performance;
+DELIMITER $$
+CREATE PROCEDURE sp_report_assignee_performance(
+    IN p_ProjectID INT,
+    IN p_MinTasks INT
+)
+BEGIN
+    SELECT 
+        CONCAT(u.FirstName, ' ', u.LastName) AS StaffName,
+        COUNT(t.TaskID) AS TotalTasksAssigned,
+        SUM(CASE WHEN ts.isFinishedStatus = 1 THEN 1 ELSE 0 END) AS CompletedTasks,
+        p.ProjectName
+    FROM UserProfile u
+    INNER JOIN Task t ON u.ProfileID = t.AssigneeID
+    INNER JOIN Project p ON t.ProjectID = p.ProjectID
+    INNER JOIN TaskStatus ts ON t.StatusID = ts.StatusID
+    WHERE t.ProjectID = p_ProjectID
+    GROUP BY u.ProfileID, p.ProjectName
+    HAVING COUNT(t.TaskID) >= COALESCE(p_MinTasks, 0)
+    ORDER BY TotalTasksAssigned DESC;
+END$$
+DELIMITER ;
