@@ -1,135 +1,245 @@
 const API_URL = '/tasks';
 let taskModal;
-
-document.addEventListener('DOMContentLoaded', () => {
-    taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
-    loadTasks();
-    loadMilestones();
-    
-    // Add search functionality
-    document.getElementById('searchInput').addEventListener('input', filterTasks);
-});
-
 let allTasks = [];
 
+/**
+ * INITIALIZATION
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+    
+    // Check if user is already logged in on page load
+    checkAuth(); 
+    
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterTasks);
+    }
+});
+
+/**
+ * AUTHENTICATION LOGIC
+ */
+async function handleLogin() {
+    const id = document.getElementById('loginId').value;
+    if (!id) return alert("Please enter a Profile ID!");
+
+    try {
+        const response = await fetch(`/users/login-id?profile_id=${id}`, { method: 'POST' });
+        const result = await response.json();
+
+        if (response.ok) {
+            // Store user info in localStorage to persist session
+            localStorage.setItem('currentUser', JSON.stringify(result.user));
+            checkAuth();
+        } else {
+            alert("Error: " + (result.detail || "ID does not exist"));
+        }
+    } catch (err) {
+        alert("Could not connect to the server!");
+    }
+}
+
+function checkAuth() {
+    const userJson = localStorage.getItem('currentUser');
+    const loginSection = document.getElementById('loginSection');
+    const mainContent = document.getElementById('mainContent');
+    const nameDisplay = document.getElementById('userNameDisplay');
+
+    if (userJson) {
+        const user = JSON.parse(userJson);
+        loginSection.style.display = 'none';
+        mainContent.style.display = 'block';
+        if (nameDisplay) nameDisplay.innerText = `Welcome, ${user.FullName}`;
+        
+        // Load data only after successful login
+        loadTasks();
+        loadMilestones();
+    } else {
+        loginSection.style.display = 'block';
+        mainContent.style.display = 'none';
+    }
+}
+
+function handleLogout() {
+    localStorage.removeItem('currentUser');
+    checkAuth();
+}
+
+/**
+ * TASK MANAGEMENT (CRUD)
+ */
 async function loadTasks() {
     try {
-        console.log('Loading tasks...');
-        // In a real app, you'd call sp_get_task_list_detailed.
-        // Here we fetch the collection from your FastAPI GET /tasks/ endpoint
         const response = await fetch(`${API_URL}/`);
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error("Failed to fetch tasks");
+        
         allTasks = await response.json();
-        console.log('Loaded tasks:', allTasks);
         renderTable(allTasks);
     } catch (err) {
-        console.error("Failed to load tasks", err);
+        console.error("Load tasks error:", err);
     }
 }
 
 function filterTasks() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const filteredTasks = allTasks.filter(task => 
-        task.title.toLowerCase().includes(searchTerm) ||
-        (task.assignee_name && task.assignee_name.toLowerCase().includes(searchTerm))
+        (task.title || task.Title || "").toLowerCase().includes(searchTerm) ||
+        (task.assignee_name || task.AssigneeName || "").toLowerCase().includes(searchTerm)
     );
     renderTable(filteredTasks);
 }
 
 function renderTable(tasks) {
     const tbody = document.getElementById('taskTableBody');
-    tbody.innerHTML = tasks.map(t => `
-        <tr class="priority-${t.task_priority}">
-            <td>${t.task_id}</td>
-            <td><strong>${t.title}</strong></td>
-            <td>${t.task_priority}</td>
-            <td>${t.assignee_name || 'Unassigned'}</td>
-            <td><span class="badge bg-info">${t.status_name || 'To Do'}</span></td>
-            <td>
-                <button class="btn btn-sm btn-outline-warning" onclick="editTask(${t.task_id})">Edit</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${t.task_id})">Delete</button>
-            </td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = tasks.map(t => {
+        // Safe key check (Snake_case or CamelCase)
+        const id = t.task_id || t.TaskID;
+        const priority = t.task_priority || t.TaskPriority || 0;
+        const dueDate = (t.due_date || t.DueDate) ? new Date(t.due_date || t.DueDate).toLocaleDateString('en-GB') : '---';
+        const createdAt = (t.creation_time || t.CreationTime) ? new Date(t.creation_time || t.CreationTime).toLocaleDateString('en-GB') : '---';
+
+        return `
+            <tr class="priority-${priority}">
+                <td>${id}</td>
+                <td><strong>${t.title || t.Title}</strong></td>
+                <td>${priority}</td>
+                <td>${t.assignee_name || t.AssigneeName || 'Unassigned'}</td>
+                <td><span class="badge bg-info">${t.status_name || t.StatusName || 'To Do'}</span></td>
+                <td><small>${dueDate}</small></td>
+                <td><small>${createdAt}</small></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-warning" onclick="editTask(${id})">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${id})">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
-// Requirement 3.1: Insert/Update Operations
+function toggleTypeDetail() {
+    const type = document.getElementById('taskType').value;
+    const container = document.getElementById('typeDetailContainer');
+    const label = document.getElementById('typeDetailLabel');
+    
+    if (type === 'Task') {
+        container.style.display = 'none';
+    } else {
+        container.style.display = 'block';
+        if (type === 'Epic') label.innerText = 'Epic Goal';
+        else if (type === 'Bug') label.innerText = 'Severity (1-5)';
+        else label.innerText = 'Story Points';
+    }
+}
+
 async function saveTask() {
     const id = document.getElementById('taskId').value;
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+
     const data = {
         title: document.getElementById('title').value,
         task_description: document.getElementById('description').value,
-        task_priority: parseInt(document.getElementById('priority').value),
-        status_id: parseInt(document.getElementById('statusId').value),
-        project_id: 1, // Default for demo
-        reporter_id: 1,
-        assignee_id: 1 // Default assignee
+        task_priority: parseInt(document.getElementById('priority').value) || 0,
+        status_id: parseInt(document.getElementById('statusId').value) || 1,
+        
+        // Polymorphism fields
+        task_type: document.getElementById('taskType').value,
+        type_detail: document.getElementById('typeDetail').value || "",
+
+        // Foreign Keys
+        project_id: 1, 
+        reporter_id: user ? user.ProfileID : 1, 
+        assignee_id: parseInt(document.getElementById('assigneeId').value) || null,
+        milestone_id: parseInt(document.getElementById('milestoneId').value) || null,
+        
+        // Date field
+        due_date: document.getElementById('dueDate').value || null,
+        parent_task_id: null
     };
+
+    console.log("Sending data to API:", data); // Check lại lần cuối trước khi gửi
 
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_URL}/${id}` : `${API_URL}/`;
 
-    const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
 
-    const result = await response.json();
-    if (response.ok) {
-        taskModal.hide();
-        loadTasks(); // Refresh the task list
-    } else {
-        // Requirement 3.2: Meaningful Error Messages
-        alert(`Error: ${result.detail || 'Check database constraints (Hierarchy/Status)'}`);
+        if (response.ok) {
+            taskModal.hide();
+            loadTasks();
+            loadMilestones();
+        } else {
+            const error = await response.json();
+            alert("Error: " + (error.detail || "Validation failed"));
+        }
+    } catch (err) {
+        console.error("Connection error:", err);
     }
 }
 
-// Requirement 3.1: Delete Operation
 async function deleteTask(id) {
-    if (!confirm("Are you sure? This calls sp_delete_task which checks for active children.")) return;
+    if (!confirm("Are you sure? This will check for active children before deleting.")) return;
 
-    const response = await fetch(`${API_URL}/${id}?force=false`, { method: 'DELETE' });
-    const result = await response.json();
-
-    if (response.ok) {
-        loadTasks(); // Refresh the task list
-    } else {
-        alert(result.detail); // Displays your "Deletion not allowed" message from SQL
+    try {
+        const response = await fetch(`${API_URL}/${id}?force=false`, { method: 'DELETE' });
+        if (response.ok) {
+            loadTasks();
+            loadMilestones();
+        } else {
+            const result = await response.json();
+            alert(result.detail); 
+        }
+    } catch (err) {
+        alert("Network error while deleting task.");
     }
 }
 
-// Requirement 3.3: Function Demonstration
+/**
+ * MILESTONES (Function/Procedure Demonstration)
+ */
 async function loadMilestones() {
     try {
-        console.log('Loading milestones...');
         const response = await fetch(`${API_URL}/reports/milestones`);
-        console.log('Milestones response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error("Failed to fetch milestones");
+        
         const data = await response.json();
-        console.log('Loaded milestones:', data);
         const container = document.getElementById('milestone-list');
 
-        container.innerHTML = data.map(m => `
-            <div class="col-md-4 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h6>${m.milestone_name || 'Unnamed Milestone'}</h6>
-                        <div class="progress">
-                            <div class="progress-bar" style="width: ${m.progress}%">${m.progress}%</div>
+        container.innerHTML = data.map(m => {
+            const name = m.milestone_name || m.MilestoneName || 'Unnamed Milestone';
+            const progress = m.progress !== undefined ? m.progress : (m.Progress || 0);
+            const dueDate = m.end_date || m.EndDate;
+            const formattedDate = dueDate ? new Date(dueDate).toLocaleDateString('en-GB') : 'No date';
+
+            return `
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <h6 class="fw-bold">${name}</h6>
+                            <div class="progress" style="height: 18px;">
+                                <div class="progress-bar bg-success" 
+                                    role="progressbar" 
+                                    style="width: ${progress}%" 
+                                    aria-valuenow="${progress}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="100">
+                                    ${Math.round(progress)}%
+                                </div>
+                            </div>
+                            <small class="text-muted mt-2 d-block">Due: ${formattedDate}</small>
                         </div>
-                        <small class="text-muted">Due: ${m.end_date || 'No date'}</small>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (err) {
-        console.error("Failed to load milestones", err);
+        console.error("Load milestones error:", err);
     }
 }
 
@@ -137,25 +247,26 @@ function showCreateModal() {
     document.getElementById('taskForm').reset();
     document.getElementById('taskId').value = '';
     document.getElementById('modalTitle').innerText = 'Create Task';
+    toggleTypeDetail(); // Ensure fields match default selection
     taskModal.show();
 }
 
 async function editTask(taskId) {
-    // Fetch task details
-    const response = await fetch(`${API_URL}/${taskId}`);
-    if (!response.ok) {
+    try {
+        const response = await fetch(`${API_URL}/${taskId}`);
+        if (!response.ok) throw new Error("Task not found");
+        
+        const task = await response.json();
+        
+        // Map backend keys to form fields
+        document.getElementById('taskId').value = task.task_id || task.TaskID;
+        document.getElementById('title').value = task.title || task.Title;
+        document.getElementById('description').value = task.task_description || task.TaskDescription || '';
+        document.getElementById('priority').value = task.task_priority || task.TaskPriority || 0;
+        
+        document.getElementById('modalTitle').innerText = 'Edit Task';
+        taskModal.show();
+    } catch (err) {
         alert('Failed to load task details');
-        return;
     }
-    const task = await response.json();
-    
-    // Populate the form
-    document.getElementById('taskId').value = task.task_id;
-    document.getElementById('title').value = task.title;
-    document.getElementById('description').value = task.task_description || '';
-    document.getElementById('priority').value = task.task_priority;
-    // Note: status_id might need to be handled differently if not in the response
-    
-    document.getElementById('modalTitle').innerText = 'Edit Task';
-    taskModal.show();
 }

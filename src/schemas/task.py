@@ -11,10 +11,13 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     project_id: int
     reporter_id: int
-    parent_task_id: Optional[int] = None
+    task_type: str = "Task"
+    type_detail: Optional[str] = ""
     status_id: Optional[int] = 1
     milestone_id: Optional[int] = None
     assignee_id: Optional[int] = None
+    parent_task_id: Optional[int] = None
+    due_date: Optional[datetime] = None
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None

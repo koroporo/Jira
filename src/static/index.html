@@ -9,58 +9,82 @@
         .priority-4 { border-left: 5px solid red; }
         .priority-0 { border-left: 5px solid gray; }
         .progress { height: 25px; }
+        #loginSection { margin-top: 15vh; }
     </style>
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1">Koroporo Jira</span>
-    </div>
-</nav>
-
-<div class="container">
-    <!-- Requirement 3.3: Function/Procedure Demonstration -->
-    <section id="milestone-section" class="mb-5">
-        <h3>🚀 Milestone Progress (Function: calculate_milestone_progress)</h3>
-        <div id="milestone-list" class="row"></div>
-    </section>
-
-    <hr>
-
-    <!-- Requirement 3.2: Data List Interface -->
-    <section id="task-section">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3>📋 Task Management</h3>
-            <button class="btn btn-primary" onclick="showCreateModal()">+ Create New Task</button>
-        </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="row g-2 mb-3">
-                    <div class="col-md-4">
-                        <input type="text" id="searchInput" class="form-control" placeholder="Search tasks...">
-                    </div>
-                </div>
-                <table class="table table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Title</th>
-                            <th>Priority</th>
-                            <th>Assignee</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="taskTableBody"></tbody>
-                </table>
+<div id="loginSection" class="container" style="max-width: 400px;">
+    <div class="card shadow border-0">
+        <div class="card-body text-center p-5">
+            <h3 class="fw-bold mb-4">Pikachu Jira</h3>
+            <p class="text-muted">Nhập Profile ID để bắt đầu</p>
+            <div class="mb-3">
+                <input type="number" id="loginId" class="form-control form-control-lg text-center" placeholder="ID (Ví dụ: 1, 2, 3)">
+            </div>
+            <button class="btn btn-primary btn-lg w-100" onclick="handleLogin()">Đăng nhập</button>
+            <div class="mt-4 small text-start bg-light p-2 rounded">
+                <strong>Gợi ý:</strong> 1: Alex (PM) | 2: Sam (Dev)
             </div>
         </div>
-    </section>
+    </div>
 </div>
 
-<!-- Task Modal (Insert/Update) -->
+<div id="mainContent" style="display: none;">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container d-flex justify-content-between">
+            <span class="navbar-brand mb-0 h1">Pikachu Jira</span>
+            <div class="text-white">
+                <span id="userNameDisplay" class="me-3 fw-bold"></span>
+                <button class="btn btn-sm btn-outline-danger" onclick="handleLogout()">Đăng xuất</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <section id="milestone-section" class="mb-5">
+            <h3 class="mb-4">🚀 Milestone Progress</h3>
+            <div id="milestone-list" class="row"></div>
+        </section>
+
+        <hr class="my-5">
+
+        <section id="task-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>📋 Task Management</h3>
+                <button class="btn btn-primary" onclick="showCreateModal()">+ Create New Task</button>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search tasks...">
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>Priority</th>
+                                    <th>Assignee</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>      
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="taskTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
 <div class="modal fade" id="taskModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -71,23 +95,58 @@
             <div class="modal-body">
                 <form id="taskForm">
                     <input type="hidden" id="taskId">
-                    <div class="mb-3">
-                        <label class="form-label">Title*</label>
-                        <input type="text" id="title" class="form-control" required>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Task Type</label>
+                            <select id="taskType" class="form-select" onchange="toggleTypeDetail()">
+                                <option value="Task" selected>Task</option>
+                                <option value="Story">Story</option>
+                                <option value="Epic">Epic</option>
+                                <option value="Bug">Bug</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3" id="typeDetailContainer" style="display: none;">
+                            <label id="typeDetailLabel" class="form-label fw-bold">Detail</label>
+                            <input type="text" id="typeDetail" class="form-control" placeholder="Enter value...">
+                        </div>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea id="description" class="form-control"></textarea>
+                        <label class="form-label fw-bold">Title*</label>
+                        <input type="text" id="title" class="form-control" required placeholder="What needs to be done?">
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea id="description" class="form-control" rows="2"></textarea>
+                    </div>
+
                     <div class="row">
                         <div class="col-6 mb-3">
-                            <label class="form-label">Priority (0-4)</label>
-                            <input type="number" id="priority" class="form-control" min="0" max="4" value="0">
+                            <label class="form-label fw-bold">Priority</label>
+                            <input type="number" id="priority" class="form-control" min="0" value="0">
                         </div>
                         <div class="col-6 mb-3">
-                            <label class="form-label">Status ID</label>
+                            <label class="form-label fw-bold">Status ID</label>
                             <input type="number" id="statusId" class="form-control" value="1">
                         </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold">Assignee ID</label>
+                            <input type="number" id="assigneeId" class="form-control" placeholder="User ID">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold">Milestone ID</label>
+                            <input type="number" id="milestoneId" class="form-control" placeholder="Milestone ID">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Due Date</label>
+                        <input type="datetime-local" id="dueDate" class="form-control">
                     </div>
                 </form>
             </div>

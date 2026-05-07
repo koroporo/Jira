@@ -11,7 +11,7 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
-            args = (
+            args = [
                 task_in.title,
                 task_in.task_description,
                 task_in.task_priority,
@@ -22,11 +22,13 @@ class CRUDTask:
                 task_in.project_id,
                 task_in.reporter_id,
                 task_in.assignee_id,
+                task_in.task_type,
+                task_in.type_detail,
                 0
-            )
+            ]
 
             result_args = cursor.callproc('sp_create_task', args)
-            new_id = result_args[-1]
+            new_id = result_args[-1]  
             conn.commit()
             new_task = CRUDTask.get_by_id(new_id)
             return {"status": "success", "data": new_task}
@@ -85,6 +87,7 @@ class CRUDTask:
                         'task_id': row.get('TaskID'),
                         'title': row.get('Title'),
                         'task_priority': row.get('TaskPriority'),
+                        'creation_time': row.get('CreationTime'), # Map cột CreationTime
                         'due_date': row.get('DueDate'),
                         'project_name': row.get('ProjectName'),
                         'assignee_name': row.get('AssigneeName'),

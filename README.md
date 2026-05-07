@@ -1,4 +1,19 @@
+### Deploy the app
+1. Start the database
 
+cd /workspaces/Jira
+docker-compose up -d
+
+2. Install dependencies
+
+pip install -r requirements.txt
+
+3.
+
+cd /workspaces/Jira/src
+PYTHONPATH=/workspaces/Jira/src uvicorn main:app --reload
+
+4. On the right corner sẽ xuất hiện host tại 8000. Nhấn vào đó để xem
 
 ### 3. SQL Script Structure (Part 1 & 2)
 Scripts must be executed in the following order to handle foreign key dependencies and satisfy assignment requirements[cite: 8, 35]:

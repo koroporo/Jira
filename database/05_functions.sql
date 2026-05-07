@@ -7,6 +7,7 @@
 -- Output: INT - number of overdue tasks
 -- Need to modify the status table: adding boolean is_finished
 DELIMITER //
+DROP FUNCTION IF EXISTS num_of_overdue_task//
 CREATE FUNCTION num_of_overdue_task (pAssigneeID INT)
 RETURNS INT
 DETERMINISTIC
@@ -56,6 +57,7 @@ DELIMITER ;
 -- Output: DECIMAL(5,2) - percentage
 -- Need to modify the milestone table: adding boolean is_finished
 DELIMITER //
+DROP FUNCTION IF EXISTS calculate_milestone_progress//
 CREATE FUNCTION calculate_milestone_progress(m_id INT)
     RETURNS DECIMAL(5,2)
     DETERMINISTIC

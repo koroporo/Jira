@@ -37,6 +37,8 @@ CREATE PROCEDURE sp_create_task(
     IN  p_ProjectID     INT,            -- must be an existing project
     IN  p_ReporterID    INT,            -- must be an existing profile
     IN  p_AssigneeID    INT,            -- NULL allowed; if set must be an existing profile
+    IN  p_TaskType      VARCHAR(10),       -- 'Epic', 'Story', 'Bug', 'Subtask'
+    IN  p_TypeDetail    VARCHAR(250), -- Goal cho Epic, StoryPoint cho Story, Severity cho Bug
     OUT p_NewTaskID     INT
 )
 BEGIN
@@ -119,6 +121,14 @@ BEGIN
         p_ReporterID, p_AssigneeID
     );
     SET p_NewTaskID = LAST_INSERT_ID();
+    
+    IF p_TaskType = 'Epic' THEN
+        INSERT INTO Epic (TaskID, Goal) VALUES (p_NewTaskID, p_TypeDetail);
+    ELSEIF p_TaskType = 'Story' THEN
+        INSERT INTO Story (TaskID, StoryPoint) VALUES (p_NewTaskID, CAST(p_TypeDetail AS UNSIGNED));
+    ELSEIF p_TaskType = 'Bug' THEN
+        INSERT INTO Bug (TaskID, Severity) VALUES (p_NewTaskID, CAST(p_TypeDetail AS UNSIGNED));
+    END IF;
 END$$
 DELIMITER ;
 
@@ -348,6 +358,7 @@ BEGIN
         t.Title, 
         t.TaskPriority, 
         t.DueDate,
+        t.CreationTime,
         p.ProjectName,
         CONCAT(u.FirstName, ' ', u.LastName) AS AssigneeName,
         ts.StatusName
