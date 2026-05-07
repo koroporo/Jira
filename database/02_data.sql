@@ -41,27 +41,27 @@ SET FOREIGN_KEY_CHECKS = 1; -- Turn the dependency checks back on
 INSERT INTO UserAccount (Email, PasswordHash, Username)
 VALUES
     ('alex.carter@example.com',
-     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'a9f3c72e1b4d8e6f46094030e10437ee22588ffb45b747b7ea858f1ed74d292bfa4c0cbb2b307f3a',
      'alex.carter'),
 
     ('sam.lee@example.com',
-     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'a9f3c72e1b4d8e6f46094030e10437ee22588ffb45b747b7ea858f1ed74d292bfa4c0cbb2b307f3a',
      'sam.lee'),
 
     ('taylor.nguyen@example.com',
-     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'a9f3c72e1b4d8e6f46094030e10437ee22588ffb45b747b7ea858f1ed74d292bfa4c0cbb2b307f3a',
      'taylor.nguyen'),
 
     ('jordan.pham@example.com',
-     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'a9f3c72e1b4d8e6f46094030e10437ee22588ffb45b747b7ea858f1ed74d292bfa4c0cbb2b307f3a',
      'jordan.pham'),
 
     ('casey.tran@example.com',
-     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'a9f3c72e1b4d8e6f46094030e10437ee22588ffb45b747b7ea858f1ed74d292bfa4c0cbb2b307f3a',
      'casey.tran'),
 
     ('jamie.dang@example.com',
-     '8d969eef6ecad3c29a3a629280e686cff8fabcb3c1c7b1f0d9f3f6d3b6d9f2f7',
+     'a9f3c72e1b4d8e6f46094030e10437ee22588ffb45b747b7ea858f1ed74d292bfa4c0cbb2b307f3a',
      'jamie.dang');
 
 -- ============================================================

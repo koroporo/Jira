@@ -30,6 +30,14 @@ class UserAccountCreate(BaseModel):
             raise ValueError("Username must not contain spaces.")
         return v.strip()
 
+class UserLogin(BaseModel):
+    email: EmailStr = Field(..., description="User email used for login.")
+    password: str = Field(..., min_length=8, description="User password.")
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = Field(default="bearer")
+
 class UserAccountOut(BaseModel):
     """Safe public representation of a user account (no password hash)."""
     user_id: int = Field(alias="UserID")

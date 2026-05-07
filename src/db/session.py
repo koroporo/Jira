@@ -1,21 +1,21 @@
+import logging
 import mysql.connector
 from mysql.connector import Error
 
-import os
-from dotenv import load_dotenv
+from core.config import settings
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
-            host=os.getenv("DB_HOST", "localhost"),
-            port=os.getenv("DB_PORT", "3306"),
-            user=os.getenv("DB_USER", "root"),
-            database=os.getenv("DB_NAME", "db"),
-            password=os.getenv("DB_PASSWORD", "1")
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            user=settings.DB_USER,
+            database=settings.DB_NAME,
+            password=settings.DB_PASSWORD,
         )
         return connection
     except Error as e:
-        print(f"MySQL connecting failed: {e}")
-        return None
+        logger.error("MySQL connecting failed: %s", e)
+        raise ConnectionError(f"MySQL connecting failed: {e}") from e
