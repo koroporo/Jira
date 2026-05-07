@@ -49,9 +49,9 @@ BEGIN
     END IF;
  
     -- 2. Priority range check
-    IF p_Priority IS NOT NULL AND p_Priority NOT IN (0, 1, 2, 3, 4) THEN
+    IF p_Priority IS NOT NULL THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Task priority must be 0 (None), 1 (Low), 2 (Medium), 3 (High), or 4 (Critical).';
+            SET MESSAGE_TEXT = 'Task priority must not be empty.';
     END IF;
  
     -- 3. DueDate must not be in the past
@@ -97,12 +97,12 @@ BEGIN
         Title, TaskDescription, TaskPriority,
         DueDate, ParentTaskID,
         StatusID, MilestoneID,
-        ReporterID, AssigneeID, BoardID
+        ReporterID, AssigneeID
     ) VALUES (
         TRIM(p_Title), p_Description, COALESCE(p_Priority, 0),
         p_DueDate, p_ParentTaskID,
         p_StatusID, p_MilestoneID,
-        p_ReporterID, p_AssigneeID, p_BoardID
+        p_ReporterID, p_AssigneeID
     );
     SET p_NewTaskID = LAST_INSERT_ID();
 END$$
@@ -151,9 +151,9 @@ BEGIN
     END IF;
 
     -- 3. Priority range (if being changed)
-    IF v_Priority IS NOT NULL AND v_Priority NOT IN (0, 1, 2, 3, 4) THEN
+    IF v_Priority IS NOT NULL THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Task priority must be 0 (None), 1 (Low), 2 (Medium), 3 (High), or 4 (Critical).';
+            SET MESSAGE_TEXT = 'Task priority must not be empty.';
     END IF;
 
     -- 4. DueDate must not be in the past (if being changed)
@@ -173,10 +173,9 @@ BEGIN
                 SET MESSAGE_TEXT = 'StatusID does not exist in TaskStatus.';
         END IF;
 
-        SELECT t.StatusID, b.ProjectID
+        SELECT t.StatusID, t.ProjectID
         INTO   v_current_status, v_project_id
         FROM   Task t
-        LEFT JOIN Board b ON b.BoardID = t.BoardID
         WHERE  t.TaskID = p_TaskID;
 
         IF v_current_status IS NULL THEN
@@ -232,8 +231,7 @@ BEGIN
                             WHEN v_AssigneeID = -1        THEN NULL
                             WHEN v_AssigneeID IS NOT NULL THEN v_AssigneeID
                             ELSE AssigneeID
-                          END,
-        BoardID         = COALESCE(v_BoardID, BoardID)
+                          END
     WHERE TaskID = p_TaskID;
 END$$
 DELIMITER ;
@@ -320,36 +318,10 @@ END$$
 DELIMITER ;
 
 -- ============================================================
--- QUICK SMOKE-TEST CALLS
+-- 4. sp_get_task_list_detailed
+--    Retrieves a list of tasks with detailed information for a
+--    given project and/or status filter.
 -- ============================================================
--- Test Insert: valid task
-CALL sp_create_task('Fix login bug', 'Users cannot log in on mobile', 3,
-'2026-12-31 00:00:00', NULL, 1, NULL, 1, 2, @new_id);
-SELECT @new_id;
-CALL sp_update_task(1, '{"priority": 4, "assignee_id": 3}');
--- Test Insert: blank title → should error
--- CALL sp_create_task('', NULL, 0, NULL, NULL, 1, NULL, 1, NULL, NULL, @new_id);
-
--- Test Insert: past due date → should error
--- CALL sp_create_task('Old task', NULL, 1, '2020-01-01 00:00:00',
--- NULL, 1, NULL, 1, NULL, NULL, @new_id);
-
--- Test Update: change priority and assignee
--- CALL sp_update_task(1, NULL, NULL, 4, NULL, NULL, NULL, 3, NULL);
-
--- Test Delete: task with active children → should error (force=0)
--- CALL sp_delete_task(1, 0);
-
--- Test Delete: force delete
--- CALL sp_delete_task(1,1);
-
--- Test Delete: Force Delete (have child task)
--- INSERT INTO Task (Title, TaskDescription, TaskPriority, StatusID, ReporterID)
--- VALUES ('Test Parent Task', 'Parent for delete test', 0, 1, 1);
--- INSERT INTO Task (Title, TaskDescription, TaskPriority, StatusID, ReporterID, ParentTaskID)
--- VALUES ('Test Child Task', 'Active child - blocks delete', 0, 1, 1, LAST_INSERT_ID());
--- CALL sp_delete_task((SELECT TaskID FROM Task WHERE Title = 'Test Parent Task'), 1);
-
 DROP PROCEDURE IF EXISTS sp_get_task_list_detailed;
 DELIMITER $$
 CREATE PROCEDURE sp_get_task_list_detailed(
@@ -375,6 +347,12 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- ============================================================
+-- 5. sp_report_assignee_performance
+--    Generates a report of assignees with their total assigned
+--    tasks and completed tasks for a given project, optionally
+--    filtered by a minimum number of assigned tasks.
+-- ============================================================
 DROP PROCEDURE IF EXISTS sp_report_assignee_performance;
 DELIMITER $$
 CREATE PROCEDURE sp_report_assignee_performance(
@@ -398,10 +376,10 @@ BEGIN
 END$$
 DELIMITER ;
 
-
-
-
---
+-- ============================================================
+-- 6. sp_get_task_by_id
+--    Retrieves detailed information for a specific task by its ID.
+-- ============================================================
 DROP PROCEDURE IF EXISTS sp_get_task_by_id;
 DELIMITER $$
 CREATE PROCEDURE sp_get_task_by_id(IN p_TaskID INT)
@@ -424,6 +402,10 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- ============================================================
+-- 7. sp_get_milestones_report
+--    Retrieves a report of all milestones with their progress and end dates.
+-- ============================================================
 DROP PROCEDURE IF EXISTS sp_get_milestones_report;
 DELIMITER $$
 CREATE PROCEDURE sp_get_milestones_report()
