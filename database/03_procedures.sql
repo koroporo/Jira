@@ -317,6 +317,11 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- ============================================================
+-- 4. sp_get_task_list_detailed
+--    Retrieves a list of tasks with detailed information for a
+--    given project and/or status filter.
+-- ============================================================
 DROP PROCEDURE IF EXISTS sp_get_task_list_detailed;
 DELIMITER $$
 CREATE PROCEDURE sp_get_task_list_detailed(
@@ -342,6 +347,12 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- ============================================================
+-- 5. sp_report_assignee_performance
+--    Generates a report of assignees with their total assigned
+--    tasks and completed tasks for a given project, optionally
+--    filtered by a minimum number of assigned tasks.
+-- ============================================================
 DROP PROCEDURE IF EXISTS sp_report_assignee_performance;
 DELIMITER $$
 CREATE PROCEDURE sp_report_assignee_performance(
@@ -365,7 +376,10 @@ BEGIN
 END$$
 DELIMITER ;
 
---
+-- ============================================================
+-- 6. sp_get_task_by_id
+--    Retrieves detailed information for a specific task by its ID.
+-- ============================================================
 DROP PROCEDURE IF EXISTS sp_get_task_by_id;
 DELIMITER $$
 CREATE PROCEDURE sp_get_task_by_id(IN p_TaskID INT)
@@ -388,6 +402,10 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- ============================================================
+-- 7. sp_get_milestones_report
+--    Retrieves a report of all milestones with their progress and end dates.
+-- ============================================================
 DROP PROCEDURE IF EXISTS sp_get_milestones_report;
 DELIMITER $$
 CREATE PROCEDURE sp_get_milestones_report()
