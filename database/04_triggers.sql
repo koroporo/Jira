@@ -1,6 +1,10 @@
---Thanh Phu
+-- Thanh Phu
 DELIMITER $$
 -- Prevent inserting into Epic if already in Story or Bug
+DROP TRIGGER IF EXISTS prevent_duplicate_type_epic$$
+DROP TRIGGER IF EXISTS prevent_duplicate_type_story$$
+DROP TRIGGER IF EXISTS prevent_duplicate_type_bug$$
+
 CREATE TRIGGER prevent_duplicate_type_epic
 BEFORE INSERT ON Epic
 FOR EACH ROW
@@ -45,8 +49,9 @@ DELIMITER ;
 -- - Bug cannot have child tasks (leaf node)
 -- - Subtask cannot have child tasks (leaf node)
 -- ============================================================
- 
+
 DELIMITER $$
+DROP TRIGGER IF EXISTS check_task_hierarchy_jira_after_insert$$
 CREATE TRIGGER check_task_hierarchy_jira_after_insert
 AFTER INSERT ON Task
 FOR EACH ROW
@@ -158,7 +163,7 @@ BEGIN
     END IF;
 END$$
 DELIMITER ;
- 
+
 -- ============================================================
 -- TRIGGER 2: Calculate a Derived Attribute
 -- Automatically hashes password with salt before storing
@@ -169,15 +174,15 @@ DELIMITER ;
 -- ============================================================
 
 DELIMITER $$
-
 -- Trigger for NEW user registration
+DROP TRIGGER IF EXISTS check_task_hierarchy_jira_after_insert$$
 CREATE TRIGGER trg_hash_password_before_insert
 BEFORE INSERT ON UserAccount
 FOR EACH ROW
 BEGIN
     -- Predefined static salt (fixed, never changes)
     DECLARE salt VARCHAR(16);
-    SET salt = 'a9f3c72e1b4d8e6f';  --rng
+    SET salt = 'a9f3c72e1b4d8e6f'; 
 
     -- Store: salt (16 chars) + SHA256 hash (64 chars) = 80 chars total
     -- Formula: salt + SHA256(salt + raw_password)
@@ -192,6 +197,8 @@ DELIMITER ;
 -- ============================================================
 
 DELIMITER $$
+DROP TRIGGER IF EXISTS trg_AfterInsertTask$$
+DROP TRIGGER IF EXISTS trg_AfterDeleteTask$$
 
 -- Trigger 2.1: TASK++
 CREATE TRIGGER trg_AfterInsertTask
