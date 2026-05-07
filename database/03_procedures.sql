@@ -397,3 +397,43 @@ BEGIN
     ORDER BY TotalTasksAssigned DESC;
 END$$
 DELIMITER ;
+
+
+
+
+--
+DROP PROCEDURE IF EXISTS sp_get_task_by_id;
+DELIMITER $$
+CREATE PROCEDURE sp_get_task_by_id(IN p_TaskID INT)
+BEGIN
+    SELECT * FROM Task WHERE TaskID = p_TaskID;
+END$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_get_staff_dashboard;
+DELIMITER $$
+CREATE PROCEDURE sp_get_staff_dashboard(IN p_ProfileID INT)
+BEGIN
+    SELECT
+        u.ProfileID,
+        CONCAT(u.FirstName, ' ', u.LastName) AS FullName,
+        num_of_overdue_task(u.ProfileID) AS OverdueCount,
+        u.AccountStatus
+    FROM UserProfile u
+    WHERE u.ProfileID = p_ProfileID;
+END$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_get_milestones_report;
+DELIMITER $$
+CREATE PROCEDURE sp_get_milestones_report()
+BEGIN
+    SELECT
+        MilestoneID,
+        MilestoneName,
+        calculate_milestone_progress(MilestoneID) AS Progress,
+        EndDate
+    FROM Milestone
+    ORDER BY EndDate ASC;
+END$$
+DELIMITER ;
