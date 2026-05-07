@@ -151,7 +151,7 @@ BEGIN
     END IF;
 
     -- 3. Priority range (if being changed)
-    IF p_Priority IS NOT NULL THEN
+    IF v_Priority IS NOT NULL THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Task priority must not be empty.';
     END IF;
