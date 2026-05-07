@@ -48,6 +48,20 @@ class CRUDTask:
             conn.close()
 
     @staticmethod
+    def get_detailed_list(project_id: int = None, status_id: int = None):
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.callproc('sp_get_task_list_detailed', (project_id, status_id))
+            results = []
+            for result in cursor.stored_results():
+                results.extend(result.fetchall())
+            return results
+        finally:
+            cursor.close()
+            conn.close()
+
+    @staticmethod
     def delete(task_id: int, force: int = 0):
         conn = get_db_connection()
         cursor = conn.cursor()

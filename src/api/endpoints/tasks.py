@@ -47,18 +47,3 @@ def get_assignee_performance(project_id: int, min_tasks: Optional[int] = None):
         raise HTTPException(status_code=404, detail="Không tìm thấy dữ liệu.")
     return result
 
-@router.get("/", response_model=List[TaskListRead])
-def get_task_list(project_id: Optional[int] = None, status_id: Optional[int] = None):
-    """Danh sách task có filter - gọi sp_get_task_list_detailed"""
-    return CRUDTask.get_list(project_id, status_id)
-
-@router.get("/{task_id}", response_model=TaskRead)
-def get_task(task_id: int):
-    """Lấy chi tiết một task theo ID - gọi sp_get_task_by_id"""
-    task = CRUDTask.get_by_id(task_id)
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Task {task_id} not exists."
-        )
-    return task
