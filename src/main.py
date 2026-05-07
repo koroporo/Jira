@@ -56,4 +56,4 @@ def debug_tasks_raw():
         }
 
 # This allows you to open index.html at http://localhost:8000
-app.mount("/", StaticFiles(directory="src/static", html=True), name="static")
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
