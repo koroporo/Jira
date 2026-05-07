@@ -4,7 +4,9 @@ src/core/config.py
 Reads all sensitive configuration from the .env file.
 Never hardcode credentials in source code.
 """
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+BASE_DIR = Path(__file__).resolve().parents[2]
 
 class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────────────
@@ -20,7 +22,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )

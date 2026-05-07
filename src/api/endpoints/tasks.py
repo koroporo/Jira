@@ -54,10 +54,33 @@ def get_milestones_progress_report():
     return CRUDTask.get_milestones_report()
 
 @router.get("/reports/performance", response_model=List[AssigneePerformanceRead])
-def get_assignee_performance(project_id: int, min_tasks: Optional[int] = None):
+def get_assignee_performance(project_id: int, min_tasks: Optional[int] = 0):
     """Báo cáo hiệu suất nhân viên theo project - gọi sp_report_assignee_performance"""
     result = CRUDTask.get_assignee_performance(project_id, min_tasks)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy dữ liệu.")
     return result
 
+@router.get("/reports/staff/{profile_id}")
+def get_staff_report(profile_id: int):
+    """Báo cáo tổng quan nhân viên - gọi sp_get_staff_dashboard"""
+    data = CRUDTask.get_staff_dashboard(profile_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhân viên.")
+    return data
+
+@router.get("/", response_model=List[TaskListRead])
+def get_task_list(project_id: Optional[int] = None, status_id: Optional[int] = None):
+    """Danh sách task có filter - gọi sp_get_task_list_detailed"""
+    return CRUDTask.get_detailed_list(project_id, status_id)
+
+@router.get("/{task_id}", response_model=TaskRead)
+def get_task(task_id: int):
+    """Lấy chi tiết một task theo ID - gọi sp_get_task_by_id"""
+    task = CRUDTask.get_by_id(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task {task_id} not exists."
+        )
+    return task

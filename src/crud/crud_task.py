@@ -27,9 +27,11 @@ class CRUDTask:
                 0
             ]
 
-            result_args = cursor.callproc('sp_create_task', args)
-            new_id = result_args[-1]  
+            cursor.callproc('sp_create_task', args)
             conn.commit()
+            cursor.execute("SELECT LAST_INSERT_ID() as new_id")
+            row = cursor.fetchone()
+            new_id = row["new_id"]
             new_task = CRUDTask.get_by_id(new_id)
             return {"status": "success", "data": new_task}
         except Exception as e:
