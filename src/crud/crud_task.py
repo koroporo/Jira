@@ -1,6 +1,9 @@
 from db.session import get_db_connection
 import json
+import logging
 from schemas.task import TaskCreate, TaskUpdate
+
+logger = logging.getLogger(__name__)
 
 class CRUDTask:
     @staticmethod
@@ -8,7 +11,7 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
-            args = args = (
+            args = (
                 task_in.title,
                 task_in.task_description,
                 task_in.task_priority,
@@ -16,6 +19,7 @@ class CRUDTask:
                 task_in.parent_task_id,
                 task_in.status_id,
                 task_in.milestone_id,
+                task_in.project_id,
                 task_in.reporter_id,
                 task_in.assignee_id,
                 0
@@ -24,7 +28,8 @@ class CRUDTask:
             result_args = cursor.callproc('sp_create_task', args)
             new_id = result_args[-1]
             conn.commit()
-            return {"status": "success", "data": {"task_id": new_id, **task_in.model_dump()}}
+            new_task = CRUDTask.get_by_id(new_id)
+            return {"status": "success", "data": new_task}
         except Exception as e:
             return {"status": "error", "message": str(e)}
         finally:
@@ -36,11 +41,29 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
-            json_data = json.dumps(task_out.model_dump(exclude_none=True), default=str)
+            payload = task_out.model_dump(exclude_none=True)
+            mapped_payload = {}
+            if "title" in payload:
+                mapped_payload["title"] = payload["title"]
+            if "task_description" in payload:
+                mapped_payload["description"] = payload["task_description"]
+            if "task_priority" in payload:
+                mapped_payload["priority"] = payload["task_priority"]
+            if "due_date" in payload:
+                mapped_payload["due_date"] = payload["due_date"]
+            if "status_id" in payload:
+                mapped_payload["status_id"] = payload["status_id"]
+            if "milestone_id" in payload:
+                mapped_payload["milestone_id"] = payload["milestone_id"]
+            if "assignee_id" in payload:
+                mapped_payload["assignee_id"] = payload["assignee_id"]
+
+            json_data = json.dumps(mapped_payload, default=str)
             cursor.callproc('sp_update_task', (task_id, json_data))
             conn.commit()
 
-            return {"status": "success", "data": {"task_id": task_id, **task_out.model_dump()}}
+            updated_task = CRUDTask.get_by_id(task_id)
+            return {"status": "success", "data": updated_task}
         except Exception as e:
             return {"status": "error", "message": str(e)}
         finally:
@@ -52,11 +75,27 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
+            logger.info(f"Calling sp_get_task_list_detailed with project_id={project_id}, status_id={status_id}")
             cursor.callproc('sp_get_task_list_detailed', (project_id, status_id))
             results = []
             for result in cursor.stored_results():
-                results.extend(result.fetchall())
+                for row in result.fetchall():
+                    # Map camelCase database columns to snake_case Python fields
+                    mapped_row = {
+                        'task_id': row.get('TaskID'),
+                        'title': row.get('Title'),
+                        'task_priority': row.get('TaskPriority'),
+                        'due_date': row.get('DueDate'),
+                        'project_name': row.get('ProjectName'),
+                        'assignee_name': row.get('AssigneeName'),
+                        'status_name': row.get('StatusName'),
+                    }
+                    results.append(mapped_row)
+            logger.info(f"Retrieved {len(results)} tasks")
             return results
+        except Exception as e:
+            logger.error(f"Error in get_detailed_list: {str(e)}", exc_info=True)
+            raise
         finally:
             cursor.close()
             conn.close()
@@ -76,7 +115,7 @@ class CRUDTask:
             conn.close()
 
     @staticmethod
-    def get_assignee_report(project_id: int, min_tasks: int = 0):
+    def get_assignee_performance(project_id: int, min_tasks: int = 0):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:

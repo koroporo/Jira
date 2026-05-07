@@ -35,33 +35,36 @@ class TaskRead(TaskBase):
 
 # sp_get_task_list_detailed
 class TaskListRead(BaseModel):
-    task_id: int
-    title: str
-    task_priority: int
-    due_date: Optional[datetime]
-    project_name: str
-    assignee_name: Optional[str]
-    status_name: str
+    task_id: int = Field(..., alias="TaskID")
+    title: str = Field(..., alias="Title")
+    task_priority: int = Field(..., alias="TaskPriority")
+    due_date: Optional[datetime] = Field(None, alias="DueDate")
+    project_name: str = Field(..., alias="ProjectName")
+    assignee_name: Optional[str] = Field(None, alias="AssigneeName")
+    status_name: str = Field(..., alias="StatusName")
 
     class Config:
         from_attributes = True
+        populate_by_name = True  # Allow both alias and field name
 
 # sp_report_assignee_performance
 class AssigneePerformanceRead(BaseModel):
-    staff_name: str
-    total_tasks_assigned: int
-    completed_tasks: int
-    project_name: str
+    staff_name: str = Field(..., alias="StaffName")
+    total_tasks_assigned: int = Field(..., alias="TotalTasksAssigned")
+    completed_tasks: int = Field(..., alias="CompletedTasks")
+    project_name: str = Field(..., alias="ProjectName")
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 # sp_get_milestones_report
 class MilestoneProgressRead(BaseModel):
-    milestone_id: int
-    milestone_name: Optional[str]
-    progress: float
-    end_date: Optional[datetime]
+    milestone_id: int = Field(..., alias="MilestoneID")
+    milestone_name: Optional[str] = Field(None, alias="MilestoneName")
+    progress: float = Field(..., alias="Progress")
+    end_date: Optional[datetime] = Field(None, alias="EndDate")
 
     class Config:
         from_attributes = True
+        populate_by_name = True

@@ -19,6 +19,20 @@ def create_task(task_in: TaskCreate):
         raise HTTPException(status_code=400, detail=result["message"])
     return result["data"]
 
+@router.get("/", response_model=List[TaskListRead])
+def list_tasks(project_id: Optional[int] = None, status_id: Optional[int] = None):
+    try:
+        return CRUDTask.get_detailed_list(project_id, status_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load tasks: {str(e)}")
+
+@router.get("/{task_id}", response_model=TaskRead)
+def get_task(task_id: int):
+    task = CRUDTask.get_by_id(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found.")
+    return task
+
 @router.put("/{task_id}", response_model=TaskRead)
 def update_task(task_id: int, task_out: TaskUpdate):
     result = CRUDTask.update(task_id, task_out)

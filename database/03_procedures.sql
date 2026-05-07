@@ -29,11 +29,12 @@ DELIMITER $$
 CREATE PROCEDURE sp_create_task(
     IN  p_Title         VARCHAR(50),
     IN  p_Description   VARCHAR(255),
-    IN  p_Priority      INT,            -- 0 = None, 1 = Low, 2 = Medium, 3 = High, 4 = Critical
+    IN  p_Priority      INT,            -- 0 = None, the higher, the more urgent
     IN  p_DueDate       TIMESTAMP,      -- NULL is allowed
     IN  p_ParentTaskID  INT,            -- NULL = top-level task
     IN  p_StatusID      INT,            -- must exist in TaskStatus
     IN  p_MilestoneID   INT,            -- NULL allowed
+    IN  p_ProjectID     INT,            -- must be an existing project
     IN  p_ReporterID    INT,            -- must be an existing profile
     IN  p_AssigneeID    INT,            -- NULL allowed; if set must be an existing profile
     OUT p_NewTaskID     INT
@@ -41,6 +42,7 @@ CREATE PROCEDURE sp_create_task(
 BEGIN
     DECLARE v_status_exists    TINYINT DEFAULT 0;
     DECLARE v_milestone_exists TINYINT DEFAULT 0;
+    DECLARE v_project_exists   TINYINT DEFAULT 0;
  
     -- 1. Title must not be blank
     IF p_Title IS NULL OR CHAR_LENGTH(TRIM(p_Title)) = 0 THEN
@@ -48,10 +50,10 @@ BEGIN
             SET MESSAGE_TEXT = 'Task title must not be empty.';
     END IF;
  
-    -- 2. Priority range check
-    IF p_Priority IS NOT NULL THEN
+    -- 2. Priority range check  
+    IF p_Priority IS NULL OR p_Priority < 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Task priority must not be empty.';
+            SET MESSAGE_TEXT = 'Task priority must be a non-negative integer.';
     END IF;
  
     -- 3. DueDate must not be in the past
@@ -68,7 +70,17 @@ BEGIN
         CALL sp_assert_profile_exists(p_AssigneeID);
     END IF;
  
-    -- 6. StatusID must exist
+    -- 6. ProjectID must exist
+    SELECT COUNT(*) INTO v_project_exists
+    FROM   Project
+    WHERE  ProjectID = p_ProjectID;
+
+    IF v_project_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'ProjectID does not exist.';
+    END IF;
+ 
+    -- 7. StatusID must exist
     IF p_StatusID IS NOT NULL THEN
         SELECT COUNT(*) INTO v_status_exists
         FROM   TaskStatus
@@ -80,7 +92,7 @@ BEGIN
         END IF;
     END IF;
  
-    -- 7. MilestoneID must exist (if provided)
+    -- 8. MilestoneID must exist (if provided)
     IF p_MilestoneID IS NOT NULL THEN
         SELECT COUNT(*) INTO v_milestone_exists
         FROM   Milestone
@@ -97,11 +109,13 @@ BEGIN
         Title, TaskDescription, TaskPriority,
         DueDate, ParentTaskID,
         StatusID, MilestoneID,
+        ProjectID,
         ReporterID, AssigneeID
     ) VALUES (
         TRIM(p_Title), p_Description, COALESCE(p_Priority, 0),
         p_DueDate, p_ParentTaskID,
         p_StatusID, p_MilestoneID,
+        p_ProjectID,
         p_ReporterID, p_AssigneeID
     );
     SET p_NewTaskID = LAST_INSERT_ID();
@@ -151,9 +165,9 @@ BEGIN
     END IF;
 
     -- 3. Priority range (if being changed)
-    IF v_Priority IS NOT NULL THEN
+    IF v_Priority IS NOT NULL AND v_Priority < 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Task priority must not be empty.';
+            SET MESSAGE_TEXT = 'Task priority must be a non-negative integer.';
     END IF;
 
     -- 4. DueDate must not be in the past (if being changed)
