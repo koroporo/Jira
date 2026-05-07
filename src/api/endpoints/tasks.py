@@ -56,7 +56,7 @@ def get_milestones_progress_report():
 @router.get("/reports/performance", response_model=List[AssigneePerformanceRead])
 def get_assignee_performance(project_id: int, min_tasks: Optional[int] = 0):
     """Báo cáo hiệu suất nhân viên theo project - gọi sp_report_assignee_performance"""
-    result = CRUDTask.get_assignee_report(project_id, min_tasks)
+    result = CRUDTask.get_assignee_performance(project_id, min_tasks)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy dữ liệu.")
     return result
