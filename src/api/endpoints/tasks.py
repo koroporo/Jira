@@ -36,22 +36,6 @@ def get_task(task_id: int):
         raise HTTPException(status_code=404, detail="Task not found")
     return task
 
-
-@router.get("/{task_id}", response_model=TaskRead)
-def get_task(task_id: int):
-    """
-    Endpoint lấy chi tiết một task theo ID.
-    Trả về TaskRead schema (đã map snake_case).
-    """
-    task = CRUDTask.get_by_id(task_id)
-
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Task {task_id} not exists."
-        )
-    return task
-
 @router.get("/reports/staff/{profile_id}")
 def get_staff_report(profile_id: int):
     """Báo cáo tổng quan nhân viên (gọi Procedure lồng Function)"""
