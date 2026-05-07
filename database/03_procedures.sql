@@ -97,12 +97,12 @@ BEGIN
         Title, TaskDescription, TaskPriority,
         DueDate, ParentTaskID,
         StatusID, MilestoneID,
-        ReporterID, AssigneeID, BoardID
+        ReporterID, AssigneeID
     ) VALUES (
         TRIM(p_Title), p_Description, COALESCE(p_Priority, 0),
         p_DueDate, p_ParentTaskID,
         p_StatusID, p_MilestoneID,
-        p_ReporterID, p_AssigneeID, p_BoardID
+        p_ReporterID, p_AssigneeID
     );
     SET p_NewTaskID = LAST_INSERT_ID();
 END$$
