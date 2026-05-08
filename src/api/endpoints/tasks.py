@@ -26,21 +26,21 @@ def list_tasks(project_id: Optional[int] = None, status_id: Optional[int] = None
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load tasks: {str(e)}")
 
-@router.get("/{task_id}", response_model=TaskRead)
+@router.get("/{task_id:int}", response_model=TaskRead)
 def get_task(task_id: int):
     task = CRUDTask.get_by_id(task_id)
     if not task:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found.")
     return task
 
-@router.put("/{task_id}", response_model=TaskRead)
+@router.put("/{task_id:int}", response_model=TaskRead)
 def update_task(task_id: int, task_out: TaskUpdate):
     result = CRUDTask.update(task_id, task_out)
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result["message"])
     return result["data"]
 
-@router.delete("/{task_id}")
+@router.delete("/{task_id:int}")
 def delete_task(task_id: int, force: bool = False):
     force_val = 1 if force else 0
     result = CRUDTask.delete(task_id, force_val)
