@@ -11,41 +11,38 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
+            # 13 arguments total (p_Title is index 0, p_NewTaskID is index 12)
             args = [
-                task_in.title,
-                task_in.task_description,
-                task_in.task_priority,
-                task_in.due_date,
-                task_in.parent_task_id,
-                task_in.status_id,
-                task_in.milestone_id,
-                task_in.project_id,
-                task_in.reporter_id,
-                task_in.assignee_id,
-                task_in.task_type,
-                task_in.type_detail,
-                None  # OUT parameter p_NewTaskID
+                task_in.title, task_in.task_description, task_in.task_priority,
+                task_in.due_date, task_in.parent_task_id, task_in.status_id,
+                task_in.milestone_id, task_in.project_id, task_in.reporter_id,
+                task_in.assignee_id, task_in.task_type, task_in.type_detail,
+                0 # Placeholder for p_NewTaskID
             ]
 
-            cursor.callproc('sp_create_task', args)
+            # result_args captures the updated OUT parameter
+            result_args = cursor.callproc('sp_create_task', args)
+            
             conn.commit()
             
-            # Retrieve the OUT parameter value from sp_outparams
-            new_id = cursor.sp_outparams.get('p_NewTaskID')
-            if not new_id:
-                logger.error("Procedure returned no task ID")
-                return {"status": "error", "message": "Failed to retrieve created task ID from procedure."}
+            cursor.execute("SELECT LAST_INSERT_ID() as new_id")
+            row = cursor.fetchone()
+            new_id = row["new_id"]
             
-            logger.info(f"Task created with ID: {new_id}")
-            new_task = CRUDTask.get_by_id(new_id)
-            return {"status": "success", "data": new_task}
+            if not new_id:
+                return {"status": "error", "message": "Database failed to generate a Task ID."}
+            
+            return {"status": "success", "data": CRUDTask.get_by_id(new_id)}
+
         except Exception as e:
-            logger.error(f"Error creating task: {str(e)}", exc_info=True)
+            conn.rollback() # Important: don't leave partial data!
+            logger.error(f"Error: {e}")
             return {"status": "error", "message": str(e)}
         finally:
             cursor.close()
             conn.close()
-
+    
+            
     @staticmethod
     def update(task_id: int, task_out: TaskUpdate):
         conn = get_db_connection()
