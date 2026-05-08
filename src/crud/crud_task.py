@@ -90,6 +90,8 @@ class CRUDTask:
                         'title': row.get('Title'),
                         'task_priority': row.get('TaskPriority'),
                         'creation_time': row.get('CreationTime'), # Map cột CreationTime
+                        'reporter_id': row.get('ReporterID'),
+                        'reporter_name': row.get('ReporterName'),
                         'due_date': row.get('DueDate'),
                         'project_name': row.get('ProjectName'),
                         'assignee_name': row.get('AssigneeName'),

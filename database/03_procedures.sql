@@ -359,6 +359,8 @@ BEGIN
         t.TaskPriority, 
         t.DueDate,
         t.CreationTime,
+        t.ReporterID,
+        CONCAT(r.FirstName, ' ', r.LastName) AS ReporterName,
         p.ProjectName,
         CONCAT(u.FirstName, ' ', u.LastName) AS AssigneeName,
         ts.StatusName
@@ -366,6 +368,7 @@ BEGIN
     INNER JOIN Project p ON t.ProjectID = p.ProjectID
     INNER JOIN TaskStatus ts ON t.StatusID = ts.StatusID
     LEFT JOIN UserProfile u ON t.AssigneeID = u.ProfileID
+    LEFT JOIN UserProfile r ON t.ReporterID = r.ProfileID
     WHERE (p_ProjectID IS NULL OR t.ProjectID = p_ProjectID)
       AND (p_StatusID IS NULL OR t.StatusID = p_StatusID)
     ORDER BY t.TaskPriority DESC, t.DueDate ASC;

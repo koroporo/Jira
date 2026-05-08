@@ -1,6 +1,7 @@
 const API_URL = '/tasks';
 let taskModal;
 let allTasks = [];
+let taskTooltips = [];
 
 /**
  * INITIALIZATION
@@ -91,17 +92,35 @@ function filterTasks() {
     renderTable(filteredTasks);
 }
 
+function escapeHtml(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function renderTable(tasks) {
     const tbody = document.getElementById('taskTableBody');
+
+    // Dispose any existing Bootstrap tooltip instances to avoid orphaned tooltips
+    taskTooltips.forEach(tooltip => tooltip.dispose());
+    taskTooltips = [];
+
     tbody.innerHTML = tasks.map(t => {
         // Safe key check (Snake_case or CamelCase)
         const id = t.task_id || t.TaskID;
         const priority = t.task_priority || t.TaskPriority || 0;
         const dueDate = (t.due_date || t.DueDate) ? new Date(t.due_date || t.DueDate).toLocaleDateString('en-GB') : '---';
         const createdAt = (t.creation_time || t.CreationTime) ? new Date(t.creation_time || t.CreationTime).toLocaleDateString('en-GB') : '---';
+        const reporterId = t.reporter_id || t.ReporterID || 'Unknown';
+        const reporterName = t.reporter_name || t.ReporterName || '';
+        const reporterLabel = reporterName ? `${reporterName} (#${reporterId})` : `#${reporterId}`;
+        const tooltipText = escapeHtml(`Created: ${createdAt} | Reporter: ${reporterLabel}`);
 
         return `
-            <tr class="priority-${priority}">
+            <tr data-bs-toggle="tooltip" data-bs-placement="top" title="${tooltipText}">
                 <td>${id}</td>
                 <td><strong>${t.title || t.Title}</strong></td>
                 <td>${priority}</td>
@@ -116,6 +135,12 @@ function renderTable(tasks) {
             </tr>
         `;
     }).join('');
+
+    // Initialize Bootstrap tooltips for the updated rows
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    taskTooltips = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 }
 
 function toggleTypeDetail() {
