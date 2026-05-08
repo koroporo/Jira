@@ -50,21 +50,35 @@ def delete_task(task_id: int, force: bool = False):
 
 @router.get("/reports/milestones", response_model=List[MilestoneProgressRead])
 def get_milestones_progress_report():
-    """Báo cáo tiến độ Milestone - gọi sp_get_milestones_report"""
-    return CRUDTask.get_milestones_report()
+    """Generate milestone progress report - calls sp_get_milestones_report"""
+    try:
+        result = CRUDTask.get_milestones_report()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving milestone report: {str(e)}")
 
 @router.get("/reports/performance", response_model=List[AssigneePerformanceRead])
 def get_assignee_performance(project_id: int, min_tasks: Optional[int] = 0):
-    """Báo cáo hiệu suất nhân viên theo project - gọi sp_report_assignee_performance"""
-    result = CRUDTask.get_assignee_performance(project_id, min_tasks)
-    if not result:
-        raise HTTPException(status_code=404, detail="Không tìm thấy dữ liệu.")
-    return result
+    """Generate assignee performance report - calls sp_report_assignee_performance"""
+    try:
+        result = CRUDTask.get_assignee_performance(project_id, min_tasks)
+        if not result:
+            raise HTTPException(status_code=404, detail="No performance data found for the specified project.")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving performance report: {str(e)}")
 
 @router.get("/reports/staff/{profile_id}")
 def get_staff_report(profile_id: int):
-    """Báo cáo tổng quan nhân viên - gọi sp_get_staff_dashboard"""
-    data = CRUDTask.get_staff_dashboard(profile_id)
-    if not data:
-        raise HTTPException(status_code=404, detail="Không tìm thấy nhân viên.")
-    return data
+    """Generate staff dashboard report - calls sp_get_staff_dashboard"""
+    try:
+        data = CRUDTask.get_staff_dashboard(profile_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Staff profile not found.")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving staff report: {str(e)}")

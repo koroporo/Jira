@@ -27,11 +27,13 @@ class TaskUpdate(BaseModel):
     status_id: Optional[int] = None
     milestone_id: Optional[int] = None
     assignee_id: Optional[int] = None
+    parent_task_id: Optional[int] = None
 
 class TaskRead(TaskBase):
     task_id: int
     creation_time: datetime
     update_time: Optional[datetime] = None
+    parent_task_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -48,6 +50,8 @@ class TaskListRead(BaseModel):
     project_name: str = Field(..., alias="ProjectName")
     assignee_name: Optional[str] = Field(None, alias="AssigneeName")
     status_name: str = Field(..., alias="StatusName")
+    parent_task_id: Optional[int] = Field(None, alias="ParentTaskID")
+    parent_task_title: Optional[str] = Field(None, alias="ParentTaskTitle")
 
     class Config:
         from_attributes = True

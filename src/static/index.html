@@ -16,13 +16,13 @@
     <div class="card shadow border-0">
         <div class="card-body text-center p-5">
             <h3 class="fw-bold mb-4">Pikachu Jira</h3>
-            <p class="text-muted">Nhập Profile ID để bắt đầu</p>
+            <p class="text-muted">Enter Profile ID to start</p>
             <div class="mb-3">
-                <input type="number" id="loginId" class="form-control form-control-lg text-center" placeholder="ID (Ví dụ: 1, 2, 3)">
+                <input type="number" id="loginId" class="form-control form-control-lg text-center" placeholder="ID (e.g. 1, 2, 3)">
             </div>
-            <button class="btn btn-primary btn-lg w-100" onclick="handleLogin()">Đăng nhập</button>
+            <button class="btn btn-primary btn-lg w-100" onclick="handleLogin()">Login</button>
             <div class="mt-4 small text-start bg-light p-2 rounded">
-                <strong>Gợi ý:</strong> 1: Alex (PM) | 2: Sam (Dev)
+                <strong>Hint:</strong> 1: Alex (PM) | 2: Sam (Dev)
             </div>
         </div>
     </div>
@@ -34,7 +34,7 @@
             <span class="navbar-brand mb-0 h1">Pikachu Jira</span>
             <div class="text-white">
                 <span id="userNameDisplay" class="me-3 fw-bold"></span>
-                <button class="btn btn-sm btn-outline-danger" onclick="handleLogout()">Đăng xuất</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="handleLogout()">Logout</button>
             </div>
         </div>
     </nav>
@@ -59,6 +59,31 @@
                         <div class="col-md-4">
                             <input type="text" id="searchInput" class="form-control" placeholder="Search tasks...">
                         </div>
+                        <div class="col-md-3">
+                            <select id="statusFilter" class="form-select" onchange="applyFilters()">
+                                <option value="">All Statuses</option>
+                                <option value="1">To Do</option>
+                                <option value="2">In Progress</option>
+                                <option value="3">Review</option>
+                                <option value="4">Done</option>
+                                <option value="5">Idea</option>
+                                <option value="6">Planning</option>
+                                <option value="7">Executing</option>
+                                <option value="8">Code Review</option>
+                                <option value="9">Testing</option>
+                                <option value="10">To Test</option>
+                                <option value="11">Bug Found</option>
+                                <option value="12">Applied</option>
+                                <option value="13">Screening</option>
+                                <option value="14">Interview</option>
+                                <option value="15">Offer</option>
+                                <option value="16">Hired</option>
+                                <option value="17">Rejected</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Reset Filters</button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover">
@@ -66,6 +91,8 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Title</th>
+                                    <th>Project</th>
+                                    <th>Parent</th>
                                     <th>Priority</th>
                                     <th>Assignee</th>
                                     <th>Status</th>
@@ -140,6 +167,12 @@
                             <label class="form-label fw-bold">Milestone ID</label>
                             <input type="number" id="milestoneId" class="form-control" placeholder="Milestone ID">
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Parent Task ID</label>
+                        <input type="number" id="parentTaskId" class="form-control" placeholder="Enter parent task ID for subtasks or children">
+                        <div class="form-text">Leave blank for top-level tasks.</div>
                     </div>
 
                     <div class="mb-3">

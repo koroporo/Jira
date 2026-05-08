@@ -71,25 +71,52 @@ function handleLogout() {
 /**
  * TASK MANAGEMENT (CRUD)
  */
-async function loadTasks() {
+async function loadTasks(statusId = null) {
     try {
-        const response = await fetch(`${API_URL}/`);
+        const url = statusId ? `${API_URL}/?status_id=${statusId}` : `${API_URL}/`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error("Failed to fetch tasks");
         
         allTasks = await response.json();
         renderTable(allTasks);
     } catch (err) {
         console.error("Load tasks error:", err);
+        alert("Error loading tasks: " + err.message);
     }
 }
 
 function filterTasks() {
+    applyFilters();
+}
+
+function applyFilters() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const filteredTasks = allTasks.filter(task => 
-        (task.title || task.Title || "").toLowerCase().includes(searchTerm) ||
-        (task.assignee_name || task.AssigneeName || "").toLowerCase().includes(searchTerm)
-    );
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    let filteredTasks = allTasks;
+    
+    // Apply status filter via API if selected
+    if (statusFilter) {
+        loadTasks(parseInt(statusFilter));
+        return;
+    }
+    
+    // Apply text search filter
+    filteredTasks = allTasks.filter(task => {
+        const title = (task.title || task.Title || "").toLowerCase();
+        const assignee = (task.assignee_name || task.AssigneeName || "").toLowerCase();
+        const project = (task.project_name || task.ProjectName || "").toLowerCase();
+        const parent = (task.parent_task_title || task.ParentTaskTitle || task.parent_task_id || task.ParentTaskID || "").toString().toLowerCase();
+        return title.includes(searchTerm) || assignee.includes(searchTerm) || project.includes(searchTerm) || parent.includes(searchTerm);
+    });
+    
     renderTable(filteredTasks);
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    loadTasks();
 }
 
 function escapeHtml(text) {
@@ -119,10 +146,17 @@ function renderTable(tasks) {
         const reporterLabel = reporterName ? `${reporterName} (#${reporterId})` : `#${reporterId}`;
         const tooltipText = escapeHtml(`Created: ${createdAt} | Reporter: ${reporterLabel}`);
 
+        const parentTaskId = t.parent_task_id || t.ParentTaskID || null;
+        const parentTaskTitle = t.parent_task_title || t.ParentTaskTitle || null;
+        const parentLabel = parentTaskTitle ? `${parentTaskTitle} (#${parentTaskId})` : (parentTaskId ? `#${parentTaskId}` : 'None');
+        const projectName = t.project_name || t.ProjectName || 'Unknown project';
+
         return `
             <tr data-bs-toggle="tooltip" data-bs-placement="top" title="${tooltipText}">
                 <td>${id}</td>
                 <td><strong>${t.title || t.Title}</strong></td>
+                <td>${projectName}</td>
+                <td>${parentLabel}</td>
                 <td>${priority}</td>
                 <td>${t.assignee_name || t.AssigneeName || 'Unassigned'}</td>
                 <td><span class="badge bg-info">${t.status_name || t.StatusName || 'To Do'}</span></td>
@@ -177,10 +211,10 @@ async function saveTask() {
         reporter_id: user ? user.ProfileID : 1, 
         assignee_id: parseInt(document.getElementById('assigneeId').value) || null,
         milestone_id: parseInt(document.getElementById('milestoneId').value) || null,
+        parent_task_id: document.getElementById('parentTaskId').value ? parseInt(document.getElementById('parentTaskId').value) : null,
         
         // Date field
-        due_date: document.getElementById('dueDate').value || null,
-        parent_task_id: null
+        due_date: document.getElementById('dueDate').value || null
     };
 
     console.log("Sending data to API:", data); // Check lại lần cuối trước khi gửi
@@ -271,6 +305,7 @@ async function loadMilestones() {
 function showCreateModal() {
     document.getElementById('taskForm').reset();
     document.getElementById('taskId').value = '';
+    document.getElementById('parentTaskId').value = '';
     document.getElementById('modalTitle').innerText = 'Create Task';
     toggleTypeDetail(); // Ensure fields match default selection
     taskModal.show();
@@ -288,6 +323,11 @@ async function editTask(taskId) {
         document.getElementById('title').value = task.title || task.Title;
         document.getElementById('description').value = task.task_description || task.TaskDescription || '';
         document.getElementById('priority').value = task.task_priority || task.TaskPriority || 0;
+        document.getElementById('statusId').value = task.status_id || task.StatusID || 1;
+        document.getElementById('assigneeId').value = task.assignee_id || task.AssigneeID || '';
+        document.getElementById('milestoneId').value = task.milestone_id || task.MilestoneID || '';
+        document.getElementById('parentTaskId').value = task.parent_task_id || task.ParentTaskID || '';
+        document.getElementById('dueDate').value = task.due_date ? new Date(task.due_date).toISOString().slice(0,16) : (task.DueDate ? new Date(task.DueDate).toISOString().slice(0,16) : '');
         
         document.getElementById('modalTitle').innerText = 'Edit Task';
         taskModal.show();

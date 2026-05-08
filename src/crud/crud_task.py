@@ -24,17 +24,23 @@ class CRUDTask:
                 task_in.assignee_id,
                 task_in.task_type,
                 task_in.type_detail,
-                0
+                None  # OUT parameter p_NewTaskID
             ]
 
             cursor.callproc('sp_create_task', args)
             conn.commit()
-            cursor.execute("SELECT LAST_INSERT_ID() as new_id")
-            row = cursor.fetchone()
-            new_id = row["new_id"]
+            
+            # Retrieve the OUT parameter value from sp_outparams
+            new_id = cursor.sp_outparams.get('p_NewTaskID')
+            if not new_id:
+                logger.error("Procedure returned no task ID")
+                return {"status": "error", "message": "Failed to retrieve created task ID from procedure."}
+            
+            logger.info(f"Task created with ID: {new_id}")
             new_task = CRUDTask.get_by_id(new_id)
             return {"status": "success", "data": new_task}
         except Exception as e:
+            logger.error(f"Error creating task: {str(e)}", exc_info=True)
             return {"status": "error", "message": str(e)}
         finally:
             cursor.close()
@@ -61,14 +67,19 @@ class CRUDTask:
                 mapped_payload["milestone_id"] = payload["milestone_id"]
             if "assignee_id" in payload:
                 mapped_payload["assignee_id"] = payload["assignee_id"]
+            if "parent_task_id" in payload:
+                mapped_payload["parent_task_id"] = payload["parent_task_id"]
 
             json_data = json.dumps(mapped_payload, default=str)
+            logger.info(f"Calling sp_update_task with task_id={task_id}, data={json_data}")
             cursor.callproc('sp_update_task', (task_id, json_data))
             conn.commit()
+            logger.info(f"Task {task_id} updated successfully")
 
             updated_task = CRUDTask.get_by_id(task_id)
             return {"status": "success", "data": updated_task}
         except Exception as e:
+            logger.error(f"Error updating task {task_id}: {str(e)}", exc_info=True)
             return {"status": "error", "message": str(e)}
         finally:
             cursor.close()
@@ -96,6 +107,8 @@ class CRUDTask:
                         'project_name': row.get('ProjectName'),
                         'assignee_name': row.get('AssigneeName'),
                         'status_name': row.get('StatusName'),
+                        'parent_task_id': row.get('ParentTaskID'),
+                        'parent_task_title': row.get('ParentTaskTitle'),
                     }
                     results.append(mapped_row)
             logger.info(f"Retrieved {len(results)} tasks")
@@ -112,10 +125,13 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
+            logger.info(f"Calling sp_delete_task with task_id={task_id}, force={force}")
             cursor.callproc('sp_delete_task', (task_id, force))
             conn.commit()
+            logger.info(f"Task {task_id} deleted successfully")
             return {"status": "success"}
         except Exception as e:
+            logger.error(f"Error deleting task {task_id}: {str(e)}", exc_info=True)
             return {"status": "error", "message": str(e)}
         finally:
             cursor.close()
@@ -126,11 +142,16 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
+            logger.info(f"Calling sp_report_assignee_performance with project_id={project_id}, min_tasks={min_tasks}")
             cursor.callproc('sp_report_assignee_performance', (project_id, min_tasks))
             results = []
             for result in cursor.stored_results():
                 results.extend(result.fetchall())
+            logger.info(f"Retrieved {len(results)} performance records")
             return results
+        except Exception as e:
+            logger.error(f"Error in get_assignee_performance: {str(e)}", exc_info=True)
+            return []
         finally:
             cursor.close()
             conn.close()
@@ -138,16 +159,15 @@ class CRUDTask:
     @staticmethod
     def get_by_id(task_id: int):
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)  # Nhận kết quả dạng {'TaskID': 1, ...}
+        cursor = conn.cursor(dictionary=True)
         try:
-            # Gọi procedure
+            logger.info(f"Calling sp_get_task_by_id with task_id={task_id}")
             cursor.callproc('sp_get_task_by_id', (task_id,))
 
-            # callproc trả về kết quả qua các stored_results
             for result in cursor.stored_results():
                 row = result.fetchone()
                 if row:
-                    # Map dữ liệu từ Database sang Schema Python
+                    logger.info(f"Task {task_id} retrieved successfully")
                     return {
                         "task_id": row['TaskID'],
                         "title": row['Title'],
@@ -155,11 +175,13 @@ class CRUDTask:
                         "task_priority": row['TaskPriority'],
                         "due_date": row['DueDate'],
                         "creation_time": row['CreationTime'],
-                        "update_time": row['UpdateTime']
+                        "update_time": row['UpdateTime'],
+                        "parent_task_id": row.get('ParentTaskID')
                     }
+            logger.warning(f"Task {task_id} not found")
             return None
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error(f"Error retrieving task {task_id}: {e}", exc_info=True)
             return None
         finally:
             cursor.close()
@@ -170,15 +192,18 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
-            # Gọi Procedure sp_get_staff_dashboard(p_ProfileID)
+            logger.info(f"Calling sp_get_staff_dashboard with profile_id={profile_id}")
             cursor.callproc('sp_get_staff_dashboard', (profile_id,))
 
-            # Duyệt qua các result sets (vì callproc trả về generator)
             for result in cursor.stored_results():
-                return result.fetchone()
+                data = result.fetchone()
+                if data:
+                    logger.info(f"Staff dashboard retrieved for profile {profile_id}")
+                    return data
+            logger.warning(f"No staff data found for profile {profile_id}")
             return None
         except Exception as e:
-            print(f"Error calling staff dashboard: {e}")
+            logger.error(f"Error calling staff dashboard for profile {profile_id}: {e}", exc_info=True)
             return None
         finally:
             cursor.close()
@@ -189,14 +214,16 @@ class CRUDTask:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
+            logger.info("Calling sp_get_milestones_report")
             cursor.callproc('sp_get_milestones_report')
 
             report = []
             for result in cursor.stored_results():
                 report.extend(result.fetchall())
+            logger.info(f"Retrieved {len(report)} milestones")
             return report
         except Exception as e:
-            print(f"Error calling milestone report: {e}")
+            logger.error(f"Error calling milestone report: {e}", exc_info=True)
             return []
         finally:
             cursor.close()

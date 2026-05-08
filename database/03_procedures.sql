@@ -160,6 +160,7 @@ BEGIN
     DECLARE v_StatusID    INT          DEFAULT JSON_EXTRACT(p_data, '$.status_id');
     DECLARE v_MilestoneID INT          DEFAULT JSON_EXTRACT(p_data, '$.milestone_id');
     DECLARE v_AssigneeID  INT          DEFAULT JSON_EXTRACT(p_data, '$.assignee_id');
+    DECLARE v_ParentTaskID INT         DEFAULT JSON_EXTRACT(p_data, '$.parent_task_id');
 
     -- 1. Task must exist
     SELECT COUNT(*) INTO v_exists FROM Task WHERE TaskID = p_TaskID;
@@ -238,6 +239,19 @@ BEGIN
         CALL sp_assert_profile_exists(v_AssigneeID);
     END IF;
 
+    -- 8. Parent task validation (if being changed)
+    IF v_ParentTaskID IS NOT NULL THEN
+        IF v_ParentTaskID = p_TaskID THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'ParentTaskID cannot be the task itself.';
+        END IF;
+
+        IF NOT EXISTS(SELECT 1 FROM Task WHERE TaskID = v_ParentTaskID) THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'ParentTaskID does not exist.';
+        END IF;
+    END IF;
+
     -- All checks passed → UPDATE only changed fields
     UPDATE Task
     SET
@@ -255,6 +269,11 @@ BEGIN
                             WHEN v_AssigneeID = -1        THEN NULL
                             WHEN v_AssigneeID IS NOT NULL THEN v_AssigneeID
                             ELSE AssigneeID
+                          END,
+        ParentTaskID    = CASE
+                            WHEN v_ParentTaskID = -1      THEN NULL
+                            WHEN v_ParentTaskID IS NOT NULL THEN v_ParentTaskID
+                            ELSE ParentTaskID
                           END
     WHERE TaskID = p_TaskID;
 END$$
@@ -363,12 +382,15 @@ BEGIN
         CONCAT(r.FirstName, ' ', r.LastName) AS ReporterName,
         p.ProjectName,
         CONCAT(u.FirstName, ' ', u.LastName) AS AssigneeName,
-        ts.StatusName
+        ts.StatusName,
+        t.ParentTaskID,
+        pt.Title AS ParentTaskTitle
     FROM Task t
     INNER JOIN Project p ON t.ProjectID = p.ProjectID
     INNER JOIN TaskStatus ts ON t.StatusID = ts.StatusID
     LEFT JOIN UserProfile u ON t.AssigneeID = u.ProfileID
     LEFT JOIN UserProfile r ON t.ReporterID = r.ProfileID
+    LEFT JOIN Task pt ON t.ParentTaskID = pt.TaskID
     WHERE (p_ProjectID IS NULL OR t.ProjectID = p_ProjectID)
       AND (p_StatusID IS NULL OR t.StatusID = p_StatusID)
     ORDER BY t.TaskPriority DESC, t.DueDate ASC;
