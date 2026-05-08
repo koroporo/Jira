@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const projectFilterInput = document.getElementById('projectFilter');
     if (projectFilterInput) {
+        projectFilterInput.addEventListener('input', applyFilters);
+        projectFilterInput.addEventListener('change', applyFilters);
         projectFilterInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -169,11 +171,8 @@ async function loadTasks() {
 
 function filterTasks() {
     const searchTerm = (document.getElementById('searchInput')?.value || '').toLowerCase();
-    const filteredTasks = allTasks.filter(task => 
-        pick(task, ['title', 'Title'], '').toLowerCase().includes(searchTerm) ||
-        pick(task, ['assignee_name', 'AssigneeName'], '').toLowerCase().includes(searchTerm) ||
-        pick(task, ['project_name', 'ProjectName'], '').toLowerCase().includes(searchTerm) ||
-        pick(task, ['status_name', 'StatusName'], '').toLowerCase().includes(searchTerm)
+    const filteredTasks = allTasks.filter(task =>
+        pick(task, ['title', 'Title'], '').toLowerCase().includes(searchTerm)
     );
     renderTable(filteredTasks);
 }
