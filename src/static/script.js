@@ -1,7 +1,22 @@
 const API_URL = '/tasks';
 let taskModal;
 let allTasks = [];
-let taskTooltips = [];
+
+function pick(obj, keys, fallback = '') {
+    for (const key of keys) {
+        if (obj && obj[key] !== undefined && obj[key] !== null) {
+            return obj[key];
+        }
+    }
+    return fallback;
+}
+
+function formatDate(value) {
+    if (!value) return '---';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '---';
+    return date.toLocaleDateString('en-GB');
+}
 
 /**
  * INITIALIZATION
@@ -16,6 +31,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', filterTasks);
+    }
+
+    const projectFilterInput = document.getElementById('projectFilter');
+    if (projectFilterInput) {
+        projectFilterInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
+            }
+        });
+    }
+
+    const performanceProjectInput = document.getElementById('performanceProjectId');
+    if (performanceProjectInput) {
+        performanceProjectInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                loadPerformanceReport();
+            }
+        });
+    }
+
+    const performanceMinInput = document.getElementById('performanceMinTasks');
+    if (performanceMinInput) {
+        performanceMinInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                loadPerformanceReport();
+            }
+        });
+    }
+
+    const staffProfileInput = document.getElementById('staffProfileId');
+    if (staffProfileInput) {
+        staffProfileInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                loadStaffReport();
+            }
+        });
+    }
+
+    const performanceBody = document.getElementById('performanceTableBody');
+    if (performanceBody) {
+        performanceBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted py-3">Enter a valid Project ID, then click Load Performance Report.</td>
+            </tr>
+        `;
+    }
+
+    const staffContainer = document.getElementById('staffReportContainer');
+    if (staffContainer) {
+        staffContainer.innerHTML = '<div class="col-12 text-muted">Enter a profile ID, then click Load Staff Report.</div>';
     }
 });
 
@@ -53,10 +122,16 @@ function checkAuth() {
         loginSection.style.display = 'none';
         mainContent.style.display = 'block';
         if (nameDisplay) nameDisplay.innerText = `Welcome, ${user.FullName}`;
+
+        const staffProfileInput = document.getElementById('staffProfileId');
+        if (staffProfileInput && user.ProfileID) {
+            staffProfileInput.value = user.ProfileID;
+        }
         
         // Load data only after successful login
         loadTasks();
         loadMilestones();
+        loadStaffReport(user.ProfileID);
     } else {
         loginSection.style.display = 'block';
         mainContent.style.display = 'none';
@@ -71,95 +146,74 @@ function handleLogout() {
 /**
  * TASK MANAGEMENT (CRUD)
  */
-async function loadTasks(statusId = null) {
+async function loadTasks() {
+    const projectFilterVal = document.getElementById('projectFilter')?.value;
+    const statusFilterVal = document.getElementById('statusFilter')?.value;
+
+    const params = new URLSearchParams();
+    if (projectFilterVal) params.append('project_id', projectFilterVal);
+    if (statusFilterVal) params.append('status_id', statusFilterVal);
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+
     try {
-        const url = statusId ? `${API_URL}/?status_id=${statusId}` : `${API_URL}/`;
-        const response = await fetch(url);
+        const response = await fetch(`${API_URL}/${query}`);
         if (!response.ok) throw new Error("Failed to fetch tasks");
         
         allTasks = await response.json();
-        renderTable(allTasks);
+        filterTasks();
     } catch (err) {
         console.error("Load tasks error:", err);
-        alert("Error loading tasks: " + err.message);
     }
 }
 
 function filterTasks() {
-    applyFilters();
-}
-
-function applyFilters() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
-    
-    let filteredTasks = allTasks;
-    
-    // Apply status filter via API if selected
-    if (statusFilter) {
-        loadTasks(parseInt(statusFilter));
-        return;
-    }
-    
-    // Apply text search filter
-    filteredTasks = allTasks.filter(task => {
-        const title = (task.title || task.Title || "").toLowerCase();
-        const assignee = (task.assignee_name || task.AssigneeName || "").toLowerCase();
-        const project = (task.project_name || task.ProjectName || "").toLowerCase();
-        const parent = (task.parent_task_title || task.ParentTaskTitle || task.parent_task_id || task.ParentTaskID || "").toString().toLowerCase();
-        return title.includes(searchTerm) || assignee.includes(searchTerm) || project.includes(searchTerm) || parent.includes(searchTerm);
-    });
-    
+    const searchTerm = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    const filteredTasks = allTasks.filter(task => 
+        pick(task, ['title', 'Title'], '').toLowerCase().includes(searchTerm) ||
+        pick(task, ['assignee_name', 'AssigneeName'], '').toLowerCase().includes(searchTerm) ||
+        pick(task, ['project_name', 'ProjectName'], '').toLowerCase().includes(searchTerm) ||
+        pick(task, ['status_name', 'StatusName'], '').toLowerCase().includes(searchTerm)
+    );
     renderTable(filteredTasks);
-}
-
-function resetFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('statusFilter').value = '';
-    loadTasks();
-}
-
-function escapeHtml(text) {
-    return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 function renderTable(tasks) {
     const tbody = document.getElementById('taskTableBody');
+    if (!tbody) return;
 
-    // Dispose any existing Bootstrap tooltip instances to avoid orphaned tooltips
-    taskTooltips.forEach(tooltip => tooltip.dispose());
-    taskTooltips = [];
+    if (!tasks.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center text-muted py-3">No tasks found for current filters.</td>
+            </tr>
+        `;
+        return;
+    }
 
     tbody.innerHTML = tasks.map(t => {
-        // Safe key check (Snake_case or CamelCase)
-        const id = t.task_id || t.TaskID;
-        const priority = t.task_priority || t.TaskPriority || 0;
-        const dueDate = (t.due_date || t.DueDate) ? new Date(t.due_date || t.DueDate).toLocaleDateString('en-GB') : '---';
-        const createdAt = (t.creation_time || t.CreationTime) ? new Date(t.creation_time || t.CreationTime).toLocaleDateString('en-GB') : '---';
-        const reporterId = t.reporter_id || t.ReporterID || 'Unknown';
-        const reporterName = t.reporter_name || t.ReporterName || '';
-        const reporterLabel = reporterName ? `${reporterName} (#${reporterId})` : `#${reporterId}`;
-        const tooltipText = escapeHtml(`Created: ${createdAt} | Reporter: ${reporterLabel}`);
+        const id = pick(t, ['task_id', 'TaskID'], '---');
+        const title = pick(t, ['title', 'Title'], 'Untitled');
+        const projectName = pick(t, ['project_name', 'ProjectName'], '---');
+        const parentTitle = pick(t, ['parent_task_title', 'ParentTaskTitle'], '---');
+        const parentId = pick(t, ['parent_task_id', 'ParentTaskID'], null);
+        const priority = pick(t, ['task_priority', 'TaskPriority'], 0);
+        const assignee = pick(t, ['assignee_name', 'AssigneeName'], 'Unassigned');
+        const status = pick(t, ['status_name', 'StatusName'], 'Unknown');
+        const dueDate = formatDate(pick(t, ['due_date', 'DueDate'], null));
+        const createdAt = formatDate(pick(t, ['creation_time', 'CreationTime'], null));
 
-        const parentTaskId = t.parent_task_id || t.ParentTaskID || null;
-        const parentTaskTitle = t.parent_task_title || t.ParentTaskTitle || null;
-        const parentLabel = parentTaskTitle ? `${parentTaskTitle} (#${parentTaskId})` : (parentTaskId ? `#${parentTaskId}` : 'None');
-        const projectName = t.project_name || t.ProjectName || 'Unknown project';
+        const parentDisplay = parentId ? `#${parentId} - ${parentTitle}` : '---';
 
         return `
-            <tr data-bs-toggle="tooltip" data-bs-placement="top" title="${tooltipText}">
+            <tr class="priority-${priority}">
                 <td>${id}</td>
-                <td><strong>${t.title || t.Title}</strong></td>
+                <td><strong>${title}</strong></td>
                 <td>${projectName}</td>
-                <td>${parentLabel}</td>
+                <td>${parentDisplay}</td>
                 <td>${priority}</td>
-                <td>${t.assignee_name || t.AssigneeName || 'Unassigned'}</td>
-                <td><span class="badge bg-info">${t.status_name || t.StatusName || 'To Do'}</span></td>
+                <td>${assignee}</td>
+                <td><span class="badge bg-info">${status}</span></td>
                 <td><small>${dueDate}</small></td>
                 <td><small>${createdAt}</small></td>
                 <td>
@@ -169,12 +223,22 @@ function renderTable(tasks) {
             </tr>
         `;
     }).join('');
+}
 
-    // Initialize Bootstrap tooltips for the updated rows
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    taskTooltips = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+function applyFilters() {
+    loadTasks();
+}
+
+function resetFilters() {
+    const projectFilter = document.getElementById('projectFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const searchInput = document.getElementById('searchInput');
+
+    if (projectFilter) projectFilter.value = '';
+    if (statusFilter) statusFilter.value = '';
+    if (searchInput) searchInput.value = '';
+
+    loadTasks();
 }
 
 function toggleTypeDetail() {
@@ -211,10 +275,10 @@ async function saveTask() {
         reporter_id: user ? user.ProfileID : 1, 
         assignee_id: parseInt(document.getElementById('assigneeId').value) || null,
         milestone_id: parseInt(document.getElementById('milestoneId').value) || null,
-        parent_task_id: document.getElementById('parentTaskId').value ? parseInt(document.getElementById('parentTaskId').value) : null,
         
         // Date field
-        due_date: document.getElementById('dueDate').value || null
+        due_date: document.getElementById('dueDate').value || null,
+        parent_task_id: null
     };
 
     console.log("Sending data to API:", data); // Check lại lần cuối trước khi gửi
@@ -270,11 +334,19 @@ async function loadMilestones() {
         const data = await response.json();
         const container = document.getElementById('milestone-list');
 
+        if (!container) return;
+
+        if (!data.length) {
+            container.innerHTML = '<div class="col-12 text-muted">No milestone data available.</div>';
+            return;
+        }
+
         container.innerHTML = data.map(m => {
-            const name = m.milestone_name || m.MilestoneName || 'Unnamed Milestone';
-            const progress = m.progress !== undefined ? m.progress : (m.Progress || 0);
-            const dueDate = m.end_date || m.EndDate;
-            const formattedDate = dueDate ? new Date(dueDate).toLocaleDateString('en-GB') : 'No date';
+            const name = pick(m, ['milestone_name', 'MilestoneName'], 'Unnamed Milestone');
+            const progressRaw = pick(m, ['progress', 'Progress'], 0);
+            const progress = Number(progressRaw) || 0;
+            const dueDate = pick(m, ['end_date', 'EndDate'], null);
+            const formattedDate = formatDate(dueDate);
 
             return `
                 <div class="col-md-4 mb-3">
@@ -302,10 +374,123 @@ async function loadMilestones() {
     }
 }
 
+async function loadPerformanceReport() {
+    const projectId = document.getElementById('performanceProjectId')?.value;
+    const minTasks = document.getElementById('performanceMinTasks')?.value || '0';
+    const tableBody = document.getElementById('performanceTableBody');
+
+    if (!tableBody) return;
+
+    if (!projectId) {
+        alert('Please enter a Project ID to load performance report.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/reports/performance?project_id=${projectId}&min_tasks=${minTasks}`);
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'Failed to fetch performance report');
+        }
+
+        const data = await response.json();
+        if (!data.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-3">No performance data found.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = data.map((item) => {
+            const staffName = pick(item, ['staff_name', 'StaffName'], 'Unknown');
+            const projectName = pick(item, ['project_name', 'ProjectName'], '---');
+            const totalTasks = Number(pick(item, ['total_tasks_assigned', 'TotalTasksAssigned'], 0)) || 0;
+            const completedTasks = Number(pick(item, ['completed_tasks', 'CompletedTasks'], 0)) || 0;
+            const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : '0.0';
+
+            return `
+                <tr>
+                    <td>${staffName}</td>
+                    <td>${projectName}</td>
+                    <td>${totalTasks}</td>
+                    <td>${completedTasks}</td>
+                    <td>${completionRate}%</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-danger py-3">${err.message}</td>
+            </tr>
+        `;
+    }
+}
+
+async function loadStaffReport(profileIdArg = null) {
+    const profileInput = document.getElementById('staffProfileId');
+    const container = document.getElementById('staffReportContainer');
+    const profileId = profileIdArg || profileInput?.value;
+
+    if (!container) return;
+
+    if (!profileId) {
+        container.innerHTML = '<div class="col-12 text-muted">Enter profile ID to load staff report.</div>';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/reports/staff/${profileId}`);
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'Failed to fetch staff report');
+        }
+
+        const data = await response.json();
+        const fullName = pick(data, ['FullName', 'full_name'], 'Unknown');
+        const overdueCount = pick(data, ['OverdueCount', 'overdue_count'], 0);
+        const status = pick(data, ['AccountStatus', 'account_status'], 'Unknown');
+        const profile = pick(data, ['ProfileID', 'profile_id'], profileId);
+
+        container.innerHTML = `
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Full Name</h6>
+                        <h5 class="fw-bold mb-0">${fullName}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Profile ID</h6>
+                        <h4 class="fw-bold mb-0">${profile}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Overdue Tasks</h6>
+                        <h4 class="fw-bold mb-0 text-danger">${overdueCount}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="alert alert-info mb-0">Account Status: <strong>${status}</strong></div>
+            </div>
+        `;
+    } catch (err) {
+        container.innerHTML = `<div class="col-12 text-danger">${err.message}</div>`;
+    }
+}
+
 function showCreateModal() {
     document.getElementById('taskForm').reset();
     document.getElementById('taskId').value = '';
-    document.getElementById('parentTaskId').value = '';
     document.getElementById('modalTitle').innerText = 'Create Task';
     toggleTypeDetail(); // Ensure fields match default selection
     taskModal.show();
@@ -319,15 +504,22 @@ async function editTask(taskId) {
         const task = await response.json();
         
         // Map backend keys to form fields
-        document.getElementById('taskId').value = task.task_id || task.TaskID;
-        document.getElementById('title').value = task.title || task.Title;
-        document.getElementById('description').value = task.task_description || task.TaskDescription || '';
-        document.getElementById('priority').value = task.task_priority || task.TaskPriority || 0;
-        document.getElementById('statusId').value = task.status_id || task.StatusID || 1;
-        document.getElementById('assigneeId').value = task.assignee_id || task.AssigneeID || '';
-        document.getElementById('milestoneId').value = task.milestone_id || task.MilestoneID || '';
-        document.getElementById('parentTaskId').value = task.parent_task_id || task.ParentTaskID || '';
-        document.getElementById('dueDate').value = task.due_date ? new Date(task.due_date).toISOString().slice(0,16) : (task.DueDate ? new Date(task.DueDate).toISOString().slice(0,16) : '');
+        document.getElementById('taskId').value = pick(task, ['task_id', 'TaskID'], '');
+        document.getElementById('title').value = pick(task, ['title', 'Title'], '');
+        document.getElementById('description').value = pick(task, ['task_description', 'TaskDescription'], '');
+        document.getElementById('priority').value = pick(task, ['task_priority', 'TaskPriority'], 0);
+        document.getElementById('statusId').value = pick(task, ['status_id', 'StatusID'], 1);
+        document.getElementById('assigneeId').value = pick(task, ['assignee_id', 'AssigneeID'], '');
+        document.getElementById('milestoneId').value = pick(task, ['milestone_id', 'MilestoneID'], '');
+        document.getElementById('parentTaskId').value = pick(task, ['parent_task_id', 'ParentTaskID'], '');
+
+        const dueDateRaw = pick(task, ['due_date', 'DueDate'], null);
+        if (dueDateRaw) {
+            const date = new Date(dueDateRaw);
+            if (!Number.isNaN(date.getTime())) {
+                document.getElementById('dueDate').value = date.toISOString().slice(0, 16);
+            }
+        }
         
         document.getElementById('modalTitle').innerText = 'Edit Task';
         taskModal.show();
