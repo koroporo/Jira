@@ -389,17 +389,20 @@ BEGIN
         pt.Title AS ParentTaskTitle
     FROM Task t
     INNER JOIN Project p ON t.ProjectID = p.ProjectID
-    INNER JOIN TaskStatus ts ON t.StatusID = ts.StatusID
+    LEFT JOIN TaskStatus ts ON t.StatusID = ts.StatusID
     LEFT JOIN UserProfile u ON t.AssigneeID = u.ProfileID
     LEFT JOIN UserProfile r ON t.ReporterID = r.ProfileID
     LEFT JOIN Task pt ON t.ParentTaskID = pt.TaskID
     WHERE (p_ProjectID IS NULL OR t.ProjectID = p_ProjectID)
       AND (p_StatusID IS NULL OR t.StatusID = p_StatusID)
       AND (
-            p_keyword IS NULL
+            p_keyword IS NULL OR p_keyword = ''
             OR t.Title LIKE CONCAT('%', p_keyword, '%')
-            OR t.TaskDescription LIKE CONCAT('%', p_keyword, '%'))
+            OR t.TaskDescription LIKE CONCAT('%', p_keyword, '%')
+            OR u.FirstName LIKE CONCAT('%', p_keyword, '%') 
+            OR u.LastName LIKE CONCAT('%', p_keyword, '%')  
           )
+
     ORDER BY t.TaskPriority DESC, t.DueDate ASC;
 END$$
 

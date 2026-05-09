@@ -3,450 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Koroporo Jira - Task Management</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .progress { height: 25px; }
-        #loginSection { margin-top: 15vh; }
+    <title>Koroporo Jira - Control Center</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">   
+ <style>
+          :root {
+    --jira-blue: #0052CC;
+    --jira-dark: #172B4D;
+    --jira-bg: #F4F5F7;
+}
+body { background-color: var(--jira-bg); }
+.navbar { background-color: var(--jira-dark) !important; }
+.kpi-card { border: none; border-top: 4px solid var(--jira-blue); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.table thead th { color: #6B778C; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
+<!-- LOGIN SECTION -->
 <div id="loginSection" class="container" style="max-width: 400px;">
-    <div class="card shadow border-0">
-        <div class="card-body text-center p-5">
-            <h3 class="fw-bold mb-4">Pikachu Jira</h3>
-            <p class="text-muted">Enter Profile ID to start</p>
-            <div class="mb-3">
-                <input type="number" id="loginId" class="form-control form-control-lg text-center" placeholder="ID (e.g. 1, 2, 3)">
-            </div>
-            <button class="btn btn-primary btn-lg w-100" onclick="handleLogin()">Login</button>
-            <div class="mt-4 small text-start bg-light p-2 rounded">
-                <strong>Hint:</strong> 1: Alex (PM) | 2: Sam (Dev)
-            </div>
-        </div>
+    <div class="card shadow p-5 text-center">
+        <h3 class="fw-bold mb-4">KoroTask - Mockup</h3>
+        <input type="number" id="loginId" class="form-control mb-3 text-center" placeholder="Enter Profile ID">
+        <button class="btn btn-primary w-100" onclick="handleLogin()">Login</button>
     </div>
 </div>
 
+<!-- MAIN CONTENT -->
 <div id="mainContent" style="display: none;">
     <nav class="navbar navbar-dark bg-dark mb-4">
-        <div class="container d-flex justify-content-between">
-            <span class="navbar-brand mb-0 h1">Pikachu Jira</span>
-            <div class="text-white">
-                <span id="userNameDisplay" class="me-3 fw-bold"></span>
+        <div class="container">
+            <span class="navbar-brand">KoroTask - Mockup</span>
+            <div class="text-white small">
+                <span id="userNameDisplay" class="me-3"></span>
                 <button class="btn btn-sm btn-outline-danger" onclick="handleLogout()">Logout</button>
             </div>
         </div>
     </nav>
 
-    <div class="container">
-        <section id="milestone-section" class="mb-5">
-            <h3 class="mb-4">🚀 Milestone Progress</h3>
-            <div id="milestone-list" class="row"></div>
-        </section>
-
-        <hr class="my-5">
-
-        <section id="task-section">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3>📋 Task Management</h3>
-                <button class="btn btn-primary" onclick="showCreateModal()">+ Create New Task</button>
+    <div class="container-fluid px-4">
+        
+        <!-- 1. STAFF DASHBOARD SECTION (KPI Bar) -->
+        <div class="row mb-4">
+            <div class="col-12"><h5 class="fw-bold">👤 My Status</h5></div>
+            <div id="staffReportContainer" class="row g-3">
+                <!-- script.js will inject cards here -->
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <label class="text-muted small">Profile ID</label>
+                        <input type="number" id="staffProfileId" class="form-control form-control-sm" placeholder="Enter ID to view stats">
+                        <button class="btn btn-sm btn-link p-0 text-start" onclick="loadStaffReport()">Refresh Stats</button>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <div class="card shadow-sm">
-                <div class="card-body">
-                 <div class="row g-3 align-items-end mb-4">
+        <!-- 2. TASK MANAGEMENT SECTION -->
+        <div class="row mb-4">
+            <div class="col-12 d-flex justify-content-between">
+                <h5 class="fw-bold">📋 Task Management</h5>
+                <button class="btn btn-sm btn-primary" onclick="showCreateModal()">+ New Task</button>
+            </div>
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <!-- Filters Row -->
+                        <div class="row g-2 mb-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="small fw-bold">Search</label>
+                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Keyword...">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="small fw-bold">Project</label>
+                                <input type="number" id="projectFilter" class="form-control form-control-sm" placeholder="ID">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="small fw-bold">Status</label>
+                                <select id="statusFilter" class="form-select form-select-sm">
+                                    <option value="">All Statuses</option>
+                                    <option value="1">To Do</option>
+                                    <option value="2">In Progress</option>
+                                    <option value="4">Done</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex gap-1">
+                                <button class="btn btn-sm btn-primary flex-fill" onclick="loadTasks()">Apply</button>
+                                <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="resetFilters()">Reset</button>
+                            </div>
+                        </div>
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th><th>Title</th><th>Project</th><th>Parent</th><th>Assignee</th><th>Status</th><th>Due</th><th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="taskTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <!-- SEARCH -->
-    <div class="col-lg-4 col-md-12">
-        <label class="form-label fw-semibold">
-            Search Keyword
-        </label>
-
-        <input
-            type="text"
-            id="searchInput"
-            class="form-control"
-            placeholder="Search task title..."
-        >
-    </div>
-
-    <!-- PROJECT -->
-    <div class="col-lg-2 col-md-4">
-        <label class="form-label fw-semibold">
-            Project ID
-        </label>
-
-        <input
-            type="number"
-            id="projectFilter"
-            class="form-control"
-            min="1"
-            placeholder="Optional"
-        >
-    </div>
-
-    <!-- STATUS -->
-    <div class="col-lg-3 col-md-4">
-        <label class="form-label fw-semibold">
-            Status
-        </label>
-
-        <select id="statusFilter" class="form-select">
-
-            <option value="">All Statuses</option>
-
-            <option value="1">To Do</option>
-            <option value="2">In Progress</option>
-            <option value="3">Review</option>
-            <option value="4">Done</option>
-
-            <option value="5">Idea</option>
-            <option value="6">Planning</option>
-            <option value="7">Executing</option>
-
-            <option value="8">Code Review</option>
-            <option value="9">Testing</option>
-            <option value="10">To Test</option>
-            <option value="11">Bug Found</option>
-
-            <option value="12">Applied</option>
-            <option value="13">Screening</option>
-            <option value="14">Interview</option>
-            <option value="15">Offer</option>
-            <option value="16">Hired</option>
-            <option value="17">Rejected</option>
-
-        </select>
-    </div>
-
-    <!-- BUTTONS -->
-    <div class="col-lg-3 col-md-4">
-
-        <label class="form-label invisible">
-            Actions
-        </label>
-
-        <div class="d-grid gap-2 d-md-flex">
-
-            <button
-                class="btn btn-primary flex-fill"
-                onclick="loadTasks()"
-            >
-                Search
-            </button>
-
-            <button
-                class="btn btn-outline-secondary flex-fill"
-                onclick="resetFilters()"
-            >
-                Reset
-            </button>
-
+        <!-- 3. ASSIGNEE PERFORMANCE SECTION -->
+        <div class="row">
+            <div class="col-12"><h5 class="fw-bold">📈 Assignee Performance</h5></div>
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-2 mb-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="small fw-bold">Project ID *</label>
+                                <input type="number" id="performanceProjectId" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="small fw-bold">Min Tasks</label>
+                                <input type="number" id="performanceMinTasks" class="form-control form-control-sm" value="0">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-sm btn-outline-primary w-100" onclick="loadPerformanceReport()">Analyze</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Staff Name</th><th>Project</th><th>Assigned</th><th>Completed</th><th>Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="performanceTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
 </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Title</th>
-                                    <th>Project</th>
-                                    <th>Parent</th>
-                                    <th>Priority</th>
-                                    <th>Assignee</th>
-                                    <th>Status</th>
-                                    <th>Due Date</th>
-                                    <th>Reporter</th>
-                                    <th>Created At</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="taskTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <hr class="my-5">
-
-        <section id="performance-section" class="mb-5">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3>📈 Assignee Performance</h3>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-4">
-                            <input type="number" id="performanceProjectId" class="form-control" min="1" placeholder="Project ID" required>
-                        </div>
-                        <div class="col-md-4">
-                            <input type="number" id="performanceMinTasks" class="form-control" min="0" value="0" placeholder="Minimum tasks">
-                        </div>
-                        <div class="col-md-4 d-grid">
-                            <button class="btn btn-outline-primary" onclick="loadPerformanceReport()">Load Performance Report</button>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Staff</th>
-                                    <th>Project</th>
-                                    <th>Total Tasks</th>
-                                    <th>Completed</th>
-                                    <th>Completion Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody id="performanceTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="staff-section" class="mb-5">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3>👤 Staff Dashboard</h3>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-8">
-                            <input type="number" id="staffProfileId" class="form-control" min="1" placeholder="Profile ID">
-                        </div>
-                        <div class="col-md-4 d-grid">
-                            <button class="btn btn-outline-primary" onclick="loadStaffReport()">Load Staff Report</button>
-                        </div>
-                    </div>
-
-                    <div id="staffReportContainer" class="row"></div>
-                </div>
-            </div>
-        </section>
-    </div>
-</div>
+<!-- MODAL -->
+<!-- TASK MODAL -->
 <div class="modal fade" id="taskModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow">
-
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="modalTitle">
-                    Create Task
-                </h5>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
-                </button>
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            
+            <!-- Header -->
+            <div class="modal-header bg-white border-bottom-0 pb-0">
+                <h5 class="fw-bold text-dark mb-0" id="modalTitle">Create New Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-body">
+            <div class="modal-body py-4">
                 <form id="taskForm">
-
                     <input type="hidden" id="taskId">
 
-                    <!-- ================= BASIC INFO ================= -->
-
-                    <h6 class="text-muted mb-3">Basic Information</h6>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">
-                            Title *
-                        </label>
-
-                        <input type="text"
-                               id="title"
-                               class="form-control"
-                               required
-                               placeholder="What needs to be done?">
-                    </div>
-
+                    <!-- SECTION: BASIC INFO -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">
-                            Description
-                        </label>
-
-                        <textarea id="description"
-                                  class="form-control"
-                                  rows="3"
-                                  placeholder="Describe the task..."></textarea>
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Basic Information</label>
+                        <div class="bg-light p-3 rounded-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small">Title *</label>
+                                <input type="text" id="title" class="form-control border-0 shadow-sm" placeholder="What needs to be done?" required>
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label fw-semibold small">Description</label>
+                                <textarea id="description" class="form-control border-0 shadow-sm" rows="3" placeholder="Add more details..."></textarea>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- ================= CLASSIFICATION ================= -->
-
-                    <h6 class="text-muted mb-3">Classification</h6>
-
-                    <div class="row">
-
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-bold">
-                                Task Type
-                            </label>
-
-                            <select id="taskType"
-                                    class="form-select"
-                                    onchange="toggleTypeDetail()">
-
-                                <option value="Task" selected>Task</option>
-                                <option value="Story">Story</option>
-                                <option value="Epic">Epic</option>
-                                <option value="Bug">Bug</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-4 mb-3"
-                             id="typeDetailContainer"
-                             style="display: none;">
-
-                            <label id="typeDetailLabel"
-                                   class="form-label fw-bold">
-                                Detail
-                            </label>
-
-                            <input type="text"
-                                   id="typeDetail"
-                                   class="form-control"
-                                   placeholder="Enter detail">
-                        </div>
-
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label fw-bold">
-                                Priority
-                            </label>
-
-                            <input type="number"
-                                   id="priority"
-                                   class="form-control"
-                                   min="0"
-                                   value="0">
-                        </div>
-
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label fw-bold">
-                                Status
-                            </label>
-
-                            <input type="number"
-                                   id="statusId"
-                                   class="form-control"
-                                   value="1">
-                        </div>
-
-                    </div>
-
-                    <!-- ================= ASSIGNMENT ================= -->
-
-                    <h6 class="text-muted mb-3 mt-2">Assignment</h6>
-
-                    <div class="row">
-
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold">
-                                Project ID
-                            </label>
-
-                            <input type="number"
-                                   id="projectId"
-                                   class="form-control"
-                                   placeholder="Project">
-                        </div>
-
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold">
-                                Assignee ID
-                            </label>
-
-                            <input type="number"
-                                   id="assigneeId"
-                                   class="form-control"
-                                   placeholder="Assignee">
-                        </div>
-<!-- 
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold">
-                                Reporter ID
-                            </label>
-
-                            <input type="number"
-                                   id="reporterId"
-                                   class="form-control"
-                                   placeholder="Auto if empty">
-                            </div> -->
-
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold">
-                                Milestone ID
-                            </label>
-
-                            <input type="number"
-                                   id="milestoneId"
-                                   class="form-control"
-                                   placeholder="Milestone">
-                        </div>
-
-                    </div>
-
-                    <!-- ================= SCHEDULING ================= -->
-
-                    <h6 class="text-muted mb-3 mt-2">Scheduling & Hierarchy</h6>
-
-                    <div class="row">
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">
-                                Parent Task ID
-                            </label>
-
-                            <input type="number"
-                                   id="parentTaskId"
-                                   class="form-control"
-                                   placeholder="Parent task">
-
-                            <div class="form-text">
-                                Leave blank for top-level tasks.
+                    <!-- SECTION: CLASSIFICATION & STATUS -->
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Classification</label>
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold small">Task Type</label>
+                                <select id="taskType" class="form-select border-0 shadow-sm" onchange="toggleTypeDetail()">
+                                    <option value="Task">Task</option>
+                                    <option value="Story">Story</option>
+                                    <option value="Epic">Epic</option>
+                                    <option value="Bug">Bug</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4" id="typeDetailContainer" style="display: none;">
+                                <label id="typeDetailLabel" class="form-label fw-semibold small">Detail</label>
+                                <input type="text" id="typeDetail" class="form-control border-0 shadow-sm">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold small">Priority</label>
+                                <input type="number" id="priority" class="form-control border-0 shadow-sm" value="0" min="0">
                             </div>
                         </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">
-                                Due Date
-                            </label>
 
-                            <input type="datetime-local"
-                                   id="dueDate"
-                                   class="form-control">
+                    </div>
+                 
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Milestone ID</label>
+                        <input type="number" id="milestoneId" class="form-control border-0 shadow-sm" placeholder="ID">
+                    </div>
+
+                    <!-- SECTION: ASSIGNMENT -->
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Assignment</label>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Project ID *</label>
+                                <input type="number" id="projectId" class="form-control border-0 shadow-sm" placeholder="ID" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Assignee ID</label>
+                                <input type="number" id="assigneeId" class="form-control border-0 shadow-sm" placeholder="ID">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Status ID</label>
+                                <input type="number" id="statusId" class="form-control border-0 shadow-sm" value="1">
+                            </div>
                         </div>
+                    </div>
 
+                    <!-- SECTION: SCHEDULING -->
+                    <div>
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Scheduling & Hierarchy</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Parent Task ID</label>
+                                <input type="number" id="parentTaskId" class="form-control border-0 shadow-sm" placeholder="ID">
+                                <div class="form-text small">Leave blank for top-level tasks.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Due Date</label>
+                                <input type="datetime-local" id="dueDate" class="form-control border-0 shadow-sm">
+                            </div>
+                        </div>
                     </div>
 
                 </form>
             </div>
 
-            <div class="modal-footer">
-                <button type="button"
-                        class="btn btn-outline-secondary"
-                        data-bs-dismiss="modal">
-
-                    Cancel
-                </button>
-
-                <button type="button"
-                        class="btn btn-primary px-4"
-                        onclick="saveTask()">
-
-                    Save Task
-                </button>
+            <!-- Footer -->
+            <div class="modal-footer border-top-0 px-4 pb-4">
+                <button type="button" class="btn btn-outline-secondary px-4 border-0" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-5 shadow-sm" onclick="saveTask()">Save Task</button>
             </div>
 
         </div>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="script.js"></script>
 </body>

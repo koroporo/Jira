@@ -21,41 +21,37 @@ function formatDate(value) {
 /**
  * INITIALIZATION
  */
+/**
+ * INITIALIZATION
+ */
 document.addEventListener('DOMContentLoaded', () => {
     taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
     
     // Check if user is already logged in on page load
     checkAuth(); 
+
+    // Select filter elements
     const searchInput = document.getElementById('searchInput');
-
-    if (searchInput) {
-        searchInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                applyFilters();
-            }
-        });
-    }
-
-
     const projectFilterInput = document.getElementById('projectFilter');
-    if (projectFilterInput) {
-        projectFilterInput.addEventListener('input', applyFilters);
-        projectFilterInput.addEventListener('change', applyFilters);
-        projectFilterInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                applyFilters();
-            }
-        });
-    }
-
     const statusFilterInput = document.getElementById('statusFilter');
 
-    if (statusFilterInput) {
-        statusFilterInput.addEventListener('change', applyFilters);
-    }
+    // 1. Handle "Enter" key only (No auto-refresh on typing)
+    [searchInput, projectFilterInput].forEach(el => {
+        if (el) {
+            el.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    loadTasks(); // Only search when Enter is pressed
+                }
+            });
+        }
+    });
 
+    // NOTE: We have removed .addEventListener('input') and .addEventListener('change')
+    // from projectFilter and statusFilter. They will now wait for the button click.
+
+
+    // --- Reporting Listeners (Keep these as they are specific to reports) ---
     const performanceProjectInput = document.getElementById('performanceProjectId');
     if (performanceProjectInput) {
         performanceProjectInput.addEventListener('keydown', (event) => {
@@ -100,7 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
         staffContainer.innerHTML = '<div class="col-12 text-muted">Enter a profile ID, then click Load Staff Report.</div>';
     }
 });
-
 /**
  * AUTHENTICATION LOGIC
  */
@@ -134,17 +129,10 @@ function checkAuth() {
         const user = JSON.parse(userJson);
         loginSection.style.display = 'none';
         mainContent.style.display = 'block';
-        if (nameDisplay) nameDisplay.innerText = `Welcome, ${user.FullName}`;
-
-        const staffProfileInput = document.getElementById('staffProfileId');
-        if (staffProfileInput && user.ProfileID) {
-            staffProfileInput.value = user.ProfileID;
-        }
+        if (nameDisplay) nameDisplay.innerText = `User: ${user.FullName}`;
         
-        // Load data only after successful login
         loadTasks();
-        loadMilestones();
-        loadStaffReport(user.ProfileID);
+        loadStaffReport(); 
     } else {
         loginSection.style.display = 'block';
         mainContent.style.display = 'none';
@@ -340,7 +328,8 @@ async function saveTask() {
         if (response.ok) {
             taskModal.hide();
             loadTasks();
-            loadMilestones();
+            // loadMilestones();
+
         } else {
          const error = await response.json();
          alert("Error: " + (error.detail || error.message || JSON.stringify(error)));
@@ -358,7 +347,7 @@ async function deleteTask(id) {
         const response = await fetch(`${API_URL}/${id}?force=false`, { method: 'DELETE' });
         if (response.ok) {
             loadTasks();
-            loadMilestones();
+            // loadMilestones();
         } else {
             const result = await response.json();
             alert(result.detail); 
@@ -368,56 +357,56 @@ async function deleteTask(id) {
     }
 }
 
-/**
- * MILESTONES (Function/Procedure Demonstration)
- */
-async function loadMilestones() {
-    try {
-        const response = await fetch(`${API_URL}/reports/milestones`);
-        if (!response.ok) throw new Error("Failed to fetch milestones");
+// /**
+//  * MILESTONES (Function/Procedure Demonstration)
+//  */
+// async function loadMilestones() {
+//     try {
+//         const response = await fetch(`${API_URL}/reports/milestones`);
+//         if (!response.ok) throw new Error("Failed to fetch milestones");
         
-        const data = await response.json();
-        const container = document.getElementById('milestone-list');
+//         const data = await response.json();
+//         const container = document.getElementById('milestone-list');
 
-        if (!container) return;
+//         if (!container) return;
 
-        if (!data.length) {
-            container.innerHTML = '<div class="col-12 text-muted">No milestone data available.</div>';
-            return;
-        }
+//         if (!data.length) {
+//             container.innerHTML = '<div class="col-12 text-muted">No milestone data available.</div>';
+//             return;
+//         }
 
-        container.innerHTML = data.map(m => {
-            const name = pick(m, ['milestone_name', 'MilestoneName'], 'Unnamed Milestone');
-            const progressRaw = pick(m, ['progress', 'Progress'], 0);
-            const progress = Number(progressRaw) || 0;
-            const dueDate = pick(m, ['end_date', 'EndDate'], null);
-            const formattedDate = formatDate(dueDate);
+//         container.innerHTML = data.map(m => {
+//             const name = pick(m, ['milestone_name', 'MilestoneName'], 'Unnamed Milestone');
+//             const progressRaw = pick(m, ['progress', 'Progress'], 0);
+//             const progress = Number(progressRaw) || 0;
+//             const dueDate = pick(m, ['end_date', 'EndDate'], null);
+//             const formattedDate = formatDate(dueDate);
 
-            return `
-                <div class="col-md-4 mb-3">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body">
-                            <h6 class="fw-bold">${name}</h6>
-                            <div class="progress" style="height: 18px;">
-                                <div class="progress-bar bg-success" 
-                                    role="progressbar" 
-                                    style="width: ${progress}%" 
-                                    aria-valuenow="${progress}" 
-                                    aria-valuemin="0" 
-                                    aria-valuemax="100">
-                                    ${Math.round(progress)}%
-                                </div>
-                            </div>
-                            <small class="text-muted mt-2 d-block">Due: ${formattedDate}</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    } catch (err) {
-        console.error("Load milestones error:", err);
-    }
-}
+//             return `
+//                 <div class="col-md-4 mb-3">
+//                     <div class="card shadow-sm border-0">
+//                         <div class="card-body">
+//                             <h6 class="fw-bold">${name}</h6>
+//                             <div class="progress" style="height: 18px;">
+//                                 <div class="progress-bar bg-success" 
+//                                     role="progressbar" 
+//                                     style="width: ${progress}%" 
+//                                     aria-valuenow="${progress}" 
+//                                     aria-valuemin="0" 
+//                                     aria-valuemax="100">
+//                                     ${Math.round(progress)}%
+//                                 </div>
+//                             </div>
+//                             <small class="text-muted mt-2 d-block">Due: ${formattedDate}</small>
+//                         </div>
+//                     </div>
+//                 </div>
+//             `;
+//         }).join('');
+//     } catch (err) {
+//         console.error("Load milestones error:", err);
+//     }
+// }
 
 async function loadPerformanceReport() {
     const projectId = document.getElementById('performanceProjectId')?.value;
@@ -474,63 +463,72 @@ async function loadPerformanceReport() {
     }
 }
 
-async function loadStaffReport(profileIdArg = null) {
-    const profileInput = document.getElementById('staffProfileId');
+async function loadStaffReport() {
+    const userJson = localStorage.getItem('currentUser');
+    if (!userJson) return;
+    const user = JSON.parse(userJson);
+    const profileId = user.ProfileID;
     const container = document.getElementById('staffReportContainer');
-    const profileId = profileIdArg || profileInput?.value;
-
-    if (!container) return;
-
-    if (!profileId) {
-        container.innerHTML = '<div class="col-12 text-muted">Enter profile ID to load staff report.</div>';
-        return;
-    }
 
     try {
         const response = await fetch(`${API_URL}/reports/staff/${profileId}`);
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || 'Failed to fetch staff report');
-        }
-
         const data = await response.json();
+        
         const fullName = pick(data, ['FullName', 'full_name'], 'Unknown');
-        const overdueCount = pick(data, ['OverdueCount', 'overdue_count'], 0);
-        const status = pick(data, ['AccountStatus', 'account_status'], 'Unknown');
-        const profile = pick(data, ['ProfileID', 'profile_id'], profileId);
+        const overdue = pick(data, ['OverdueCount', 'overdue_count'], 0);
+        const status = pick(data, ['AccountStatus', 'account_status'], 'Online');
+
+        // Logic for Overdue Section (Conditional Styling)
+        const overdueContent = overdue > 0 
+            ? `
+                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-2 me-3">
+                    <i class="bi bi-exclamation-circle-fill" style="font-size: 1.1rem;"></i>
+                </div>
+                <div>
+                    <small class="text-muted fw-bold d-block" style="font-size: 0.65rem;">ACTION REQUIRED</small>
+                    <span class="h6 mb-0 text-danger fw-bold">${overdue} Overdue Tasks</span>
+                </div>`
+            : `
+                <div class="bg-success bg-opacity-10 text-success rounded-circle p-2 me-3">
+                    <i class="bi bi-check-lg" style="font-size: 1.1rem;"></i>
+                </div>
+                <div>
+                    <small class="text-muted fw-bold d-block" style="font-size: 0.65rem;">STATUS</small>
+                    <span class="h6 mb-0 text-success fw-bold">All caught up!</span>
+                </div>`;
 
         container.innerHTML = `
-            <div class="col-md-4 mb-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <h6 class="text-muted mb-1">Full Name</h6>
-                        <h5 class="fw-bold mb-0">${fullName}</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <h6 class="text-muted mb-1">Profile ID</h6>
-                        <h4 class="fw-bold mb-0">${profile}</h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <h6 class="text-muted mb-1">Overdue Tasks</h6>
-                        <h4 class="fw-bold mb-0 text-danger">${overdueCount}</h4>
-                    </div>
-                </div>
-            </div>
             <div class="col-12">
-                <div class="alert alert-info mb-0">Account Status: <strong>${status}</strong></div>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body d-flex align-items-center py-2 px-4">
+                        
+                        <!-- PROFILE & ID (Merged) -->
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+                                <i class="bi bi-person-fill" style="font-size: 1.1rem;"></i>
+                            </div>
+                            <div style="min-width: 180px;">
+                                <div class="h6 mb-0 fw-bold">${fullName}</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">
+                                    <span class="text-success fw-bold">● ${status}</span> 
+                                    <span class="mx-2 text-opacity-25">|</span>
+                                    <span>ID: #${profileId}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="vr mx-4 text-muted opacity-25"></div>
+
+                        <!-- OVERDUE SECTION (Conditional) -->
+                        <div class="d-flex align-items-center">
+                            ${overdueContent}
+                        </div>
+
+                    </div>
+                </div>
             </div>
         `;
-    } catch (err) {
-        container.innerHTML = `<div class="col-12 text-danger">${err.message}</div>`;
-    }
+    } catch (err) { console.error(err); }
 }
 
 function showCreateModal() {
