@@ -230,7 +230,6 @@ function renderTable(tasks) {
                 <td><span class="badge bg-info">${status}</span></td>
                 <td><small>${dueDate}</small></td>
                 <td>${reporter}</td>
-                <td><small>${createdAt}</small></td>
                 <td>
                     <button class="btn btn-sm btn-outline-warning" onclick="editTask(${id})">Edit</button>
                     <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${id})">Delete</button>
