@@ -1,5 +1,6 @@
 const API_URL = '/tasks';
 let taskModal;
+let editTaskModal;
 let allTasks = [];
 
 function pick(obj, keys, fallback = '') {
@@ -26,6 +27,7 @@ function formatDate(value) {
  */
 document.addEventListener('DOMContentLoaded', () => {
     taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+    editTaskModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
     
     // Check if user is already logged in on page load
     checkAuth(); 
@@ -546,26 +548,65 @@ async function editTask(taskId) {
         const task = await response.json();
         
         // Map backend keys to form fields
-        document.getElementById('taskId').value = pick(task, ['task_id', 'TaskID'], '');
-        document.getElementById('title').value = pick(task, ['title', 'Title'], '');
-        document.getElementById('description').value = pick(task, ['task_description', 'TaskDescription'], '');
-        document.getElementById('priority').value = pick(task, ['task_priority', 'TaskPriority'], 0);
-        document.getElementById('statusId').value = pick(task, ['status_id', 'StatusID'], 1);
-        document.getElementById('assigneeId').value = pick(task, ['assignee_id', 'AssigneeID'], '');
-        document.getElementById('milestoneId').value = pick(task, ['milestone_id', 'MilestoneID'], '');
-        document.getElementById('parentTaskId').value = pick(task, ['parent_task_id', 'ParentTaskID'], '');
+        document.getElementById('editTaskId').value = pick(task, ['task_id', 'TaskID'], '');
+        document.getElementById('editTitle').value = pick(task, ['title', 'Title'], '');
+        document.getElementById('editDescription').value = pick(task, ['task_description', 'TaskDescription'], '');
+        document.getElementById('editPriority').value = pick(task, ['task_priority', 'TaskPriority'], 0);
+        document.getElementById('editStatusId').value = pick(task, ['status_id', 'StatusID'], 1);
+        document.getElementById('editAssigneeId').value = pick(task, ['assignee_id', 'AssigneeID'], '');
+        document.getElementById('editMilestoneId').value = pick(task, ['milestone_id', 'MilestoneID'], '');
+        document.getElementById('editParentTaskId').value = pick(task, ['parent_task_id', 'ParentTaskID'], '');
 
         const dueDateRaw = pick(task, ['due_date', 'DueDate'], null);
         if (dueDateRaw) {
             const date = new Date(dueDateRaw);
             if (!Number.isNaN(date.getTime())) {
-                document.getElementById('dueDate').value = date.toISOString().slice(0, 16);
+                document.getElementById('editDueDate').value = date.toISOString().slice(0, 16);
             }
         }
         
-        document.getElementById('modalTitle').innerText = 'Edit Task';
-        taskModal.show();
+        editTaskModal.show();
     } catch (err) {
         alert('Failed to load task details');
+    }
+}
+
+async function saveEditTask() {
+    const id = document.getElementById('editTaskId').value;
+    const titleVal = document.getElementById('editTitle').value.trim();
+    if (!titleVal) {
+        alert("Task title cannot be empty!");
+        return;
+    }
+    
+    const data = {
+        title: titleVal,
+        task_description: document.getElementById('editDescription').value,
+        task_priority: parseInt(document.getElementById('editPriority').value) || 0,
+        status_id: parseInt(document.getElementById('editStatusId').value) || 1,
+        assignee_id: parseInt(document.getElementById('editAssigneeId').value) || null,
+        milestone_id: parseInt(document.getElementById('editMilestoneId').value) || null,
+        due_date: document.getElementById('editDueDate').value || null,
+        parent_task_id: parseInt(document.getElementById('editParentTaskId').value) || null
+    };
+
+    console.log("Sending updated data to API:", data);
+
+    try {
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            editTaskModal.hide();
+            loadTasks();
+        } else {
+            const error = await response.json();
+            alert("Error: " + (error.detail || error.message || JSON.stringify(error)));
+        }
+    } catch (err) {
+        console.error("Connection error:", err);
     }
 }
