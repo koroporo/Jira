@@ -236,25 +236,64 @@ DELIMITER ;
 DELIMITER $$
 DROP TRIGGER IF EXISTS trg_AfterInsertTask$$
 DROP TRIGGER IF EXISTS trg_AfterDeleteTask$$
+DROP TRIGGER IF EXISTS trg_AfterUpdateTaskProject$$
 
--- Trigger 2.1: TASK++
+-- Recompute total from source-of-truth Task table after each change.
 CREATE TRIGGER trg_AfterInsertTask
 AFTER INSERT ON Task
 FOR EACH ROW
 BEGIN
     UPDATE Project 
-    SET TotalTasks = TotalTasks + 1 
+    SET TotalTasks = (
+        SELECT COUNT(*)
+        FROM Task
+        WHERE Task.ProjectID = NEW.ProjectID
+    )
     WHERE ProjectID = NEW.ProjectID;
 END$$
 
--- Trigger 2.2:TASK--
 CREATE TRIGGER trg_AfterDeleteTask
 AFTER DELETE ON Task
 FOR EACH ROW
 BEGIN
     UPDATE Project 
-    SET TotalTasks = TotalTasks - 1 
+    SET TotalTasks = (
+        SELECT COUNT(*)
+        FROM Task
+        WHERE Task.ProjectID = OLD.ProjectID
+    )
     WHERE ProjectID = OLD.ProjectID;
 END$$
 
+-- If a task is moved between projects, refresh both old and new projects.
+CREATE TRIGGER trg_AfterUpdateTaskProject
+AFTER UPDATE ON Task
+FOR EACH ROW
+BEGIN
+    IF NOT (NEW.ProjectID <=> OLD.ProjectID) THEN
+        UPDATE Project
+        SET TotalTasks = (
+            SELECT COUNT(*)
+            FROM Task
+            WHERE Task.ProjectID = OLD.ProjectID
+        )
+        WHERE ProjectID = OLD.ProjectID;
+
+        UPDATE Project
+        SET TotalTasks = (
+            SELECT COUNT(*)
+            FROM Task
+            WHERE Task.ProjectID = NEW.ProjectID
+        )
+        WHERE ProjectID = NEW.ProjectID;
+    END IF;
+END$$
+
+-- One-time sync when this script is executed.
+UPDATE Project p
+SET p.TotalTasks = (
+    SELECT COUNT(*)
+    FROM Task t
+    WHERE t.ProjectID = p.ProjectID
+)$$
 DELIMITER ;
