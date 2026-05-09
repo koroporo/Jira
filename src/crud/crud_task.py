@@ -83,21 +83,37 @@ class CRUDTask:
             conn.close()
 
     @staticmethod
-    def get_detailed_list(project_id: int = None, status_id: int = None):
+    def get_detailed_list(
+        project_id: int = None,
+        status_id: int = None,
+        keyword: str = None
+    ):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+
         try:
-            logger.info(f"Calling sp_get_task_list_detailed with project_id={project_id}, status_id={status_id}")
-            cursor.callproc('sp_get_task_list_detailed', (project_id, status_id))
+            logger.info(
+                f"Calling sp_get_task_list_detailed "
+                f"with project_id={project_id}, "
+                f"status_id={status_id}, "
+                f"keyword={keyword}"
+            )
+
+            cursor.callproc(
+                'sp_get_task_list_detailed',
+                (project_id, status_id, keyword)
+            )
+
             results = []
+
             for result in cursor.stored_results():
                 for row in result.fetchall():
-                    # Map camelCase database columns to snake_case Python fields
+
                     mapped_row = {
                         'task_id': row.get('TaskID'),
                         'title': row.get('Title'),
                         'task_priority': row.get('TaskPriority'),
-                        'creation_time': row.get('CreationTime'), # Map cột CreationTime
+                        'creation_time': row.get('CreationTime'),
                         'reporter_id': row.get('ReporterID'),
                         'reporter_name': row.get('ReporterName'),
                         'due_date': row.get('DueDate'),
@@ -106,18 +122,29 @@ class CRUDTask:
                         'status_name': row.get('StatusName'),
                         'parent_task_id': row.get('ParentTaskID'),
                         'parent_task_title': row.get('ParentTaskTitle'),
-                        'task_type': row.get('TaskType'),  # For polymorphic tasks
-                        'type_detail': row.get('TypeDetail'),  #
+
+                        # Optional fields
+                        'task_type': row.get('TaskType'),
+                        'type_detail': row.get('TypeDetail'),
                     }
+
                     results.append(mapped_row)
+
             logger.info(f"Retrieved {len(results)} tasks")
+
             return results
+
         except Exception as e:
-            logger.error(f"Error in get_detailed_list: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error in get_detailed_list: {str(e)}",
+                exc_info=True
+            )
             raise
+
         finally:
             if cursor:
                 cursor.close()
+
             if conn:
                 conn.close()
 

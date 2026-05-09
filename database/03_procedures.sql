@@ -367,9 +367,11 @@ DELIMITER ;
 -- ============================================================
 DROP PROCEDURE IF EXISTS sp_get_task_list_detailed;
 DELIMITER $$
+
 CREATE PROCEDURE sp_get_task_list_detailed(
     IN p_ProjectID INT,
-    IN p_StatusID INT
+    IN p_StatusID INT,
+    IN p_keyword VARCHAR(50)
 )
 BEGIN
     SELECT 
@@ -393,8 +395,14 @@ BEGIN
     LEFT JOIN Task pt ON t.ParentTaskID = pt.TaskID
     WHERE (p_ProjectID IS NULL OR t.ProjectID = p_ProjectID)
       AND (p_StatusID IS NULL OR t.StatusID = p_StatusID)
+      AND (
+            p_keyword IS NULL
+            OR t.Title LIKE CONCAT('%', p_keyword, '%')
+            OR t.TaskDescription LIKE CONCAT('%', p_keyword, '%'))
+          )
     ORDER BY t.TaskPriority DESC, t.DueDate ASC;
 END$$
+
 DELIMITER ;
 
 -- ============================================================

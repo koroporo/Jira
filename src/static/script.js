@@ -26,12 +26,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check if user is already logged in on page load
     checkAuth(); 
-    
-    // Search functionality
     const searchInput = document.getElementById('searchInput');
+
     if (searchInput) {
-        searchInput.addEventListener('input', filterTasks);
+        searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
+            }
+        });
     }
+
 
     const projectFilterInput = document.getElementById('projectFilter');
     if (projectFilterInput) {
@@ -43,6 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 applyFilters();
             }
         });
+    }
+
+    const statusFilterInput = document.getElementById('statusFilter');
+
+    if (statusFilterInput) {
+        statusFilterInput.addEventListener('change', applyFilters);
     }
 
     const performanceProjectInput = document.getElementById('performanceProjectId');
@@ -151,30 +162,44 @@ function handleLogout() {
 async function loadTasks() {
     const projectFilterVal = document.getElementById('projectFilter')?.value;
     const statusFilterVal = document.getElementById('statusFilter')?.value;
+    const keywordVal = document.getElementById('searchInput')?.value?.trim();
 
     const params = new URLSearchParams();
-    if (projectFilterVal) params.append('project_id', projectFilterVal);
-    if (statusFilterVal) params.append('status_id', statusFilterVal);
 
-    const query = params.toString() ? `?${params.toString()}` : '';
+    if (projectFilterVal) {
+        params.append('project_id', projectFilterVal);
+    }
+
+    if (statusFilterVal) {
+        params.append('status_id', statusFilterVal);
+    }
+
+    if (keywordVal) {
+        params.append('keyword', keywordVal);
+    }
+
+    const query = params.toString()
+        ? `?${params.toString()}`
+        : '';
 
     try {
         const response = await fetch(`${API_URL}/${query}`);
-        if (!response.ok) throw new Error("Failed to fetch tasks");
-        
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch tasks");
+        }
+
         allTasks = await response.json();
-        filterTasks();
+
+        renderTable(allTasks);
+
     } catch (err) {
         console.error("Load tasks error:", err);
     }
 }
 
 function filterTasks() {
-    const searchTerm = (document.getElementById('searchInput')?.value || '').toLowerCase();
-    const filteredTasks = allTasks.filter(task =>
-        pick(task, ['title', 'Title'], '').toLowerCase().includes(searchTerm)
-    );
-    renderTable(filteredTasks);
+    loadTasks();
 }
 
 function renderTable(tasks) {
@@ -185,7 +210,7 @@ function renderTable(tasks) {
     if (!tasks.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center text-muted py-3">No tasks found for current filters.</td>
+                <td colspan="11" class="text-center text-muted py-3">No tasks found for current filters.</td>
             </tr>
         `;
         return;

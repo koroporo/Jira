@@ -20,11 +20,23 @@ def create_task(task_in: TaskCreate):
     return result["data"]
 
 @router.get("/", response_model=List[TaskListRead])
-def list_tasks(project_id: Optional[int] = None, status_id: Optional[int] = None):
+def list_tasks(
+    project_id: Optional[int] = None,
+    status_id: Optional[int] = None,
+    keyword: Optional[str] = None
+):
     try:
-        return CRUDTask.get_detailed_list(project_id, status_id)
+        return CRUDTask.get_detailed_list(
+            project_id,
+            status_id,
+            keyword
+        )
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load tasks: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load tasks: {str(e)}"
+        )
 
 @router.get("/{task_id:int}", response_model=TaskRead)
 def get_task(task_id: int):
