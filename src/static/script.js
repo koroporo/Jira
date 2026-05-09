@@ -178,6 +178,7 @@ function filterTasks() {
 }
 
 function renderTable(tasks) {
+    console.log(tasks[0])
     const tbody = document.getElementById('taskTableBody');
     if (!tbody) return;
 
@@ -270,14 +271,13 @@ async function saveTask() {
         type_detail: document.getElementById('typeDetail').value || "",
 
         // Foreign Keys
-        project_id: 1, 
-        reporter_id: user ? user.ProfileID : 1, 
-        assignee_id: parseInt(document.getElementById('assigneeId').value) || null,
+        project_id: parseInt(document.getElementById('projectId').value),
+        reporter_id: parseInt(document.getElementById('reporterId').value) || (user ? user.ProfileID : 1),        assignee_id: parseInt(document.getElementById('assigneeId').value) || null,
         milestone_id: parseInt(document.getElementById('milestoneId').value) || null,
         
         // Date field
         due_date: document.getElementById('dueDate').value || null,
-        parent_task_id: null
+        parent_task_id: parseInt(document.getElementById('parentTaskId').value) || null
     };
 
     console.log("Sending data to API:", data); // Check lại lần cuối trước khi gửi

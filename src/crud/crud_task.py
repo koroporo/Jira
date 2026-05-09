@@ -106,6 +106,8 @@ class CRUDTask:
                         'status_name': row.get('StatusName'),
                         'parent_task_id': row.get('ParentTaskID'),
                         'parent_task_title': row.get('ParentTaskTitle'),
+                        'task_type': row.get('TaskType'),  # For polymorphic tasks
+                        'type_detail': row.get('TypeDetail'),  #
                     }
                     results.append(mapped_row)
             logger.info(f"Retrieved {len(results)} tasks")
@@ -114,8 +116,10 @@ class CRUDTask:
             logger.error(f"Error in get_detailed_list: {str(e)}", exc_info=True)
             raise
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     @staticmethod
     def delete(task_id: int, force: int = 0):
@@ -173,7 +177,8 @@ class CRUDTask:
                         "due_date": row['DueDate'],
                         "creation_time": row['CreationTime'],
                         "update_time": row['UpdateTime'],
-                        "parent_task_id": row.get('ParentTaskID')
+                        "parent_task_id": row.get('ParentTaskID'),
+                        "parent_task_title": row.get('ParentTaskTitle')
                     }
             logger.warning(f"Task {task_id} not found")
             return None
