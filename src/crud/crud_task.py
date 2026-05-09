@@ -127,7 +127,7 @@ class CRUDTask:
         cursor = conn.cursor()
         try:
             logger.info(f"Calling sp_delete_task with task_id={task_id}, force={force}")
-            cursor.callproc('sp_delete_task', (task_id, force))
+            cursor.callproc('sp_delete_task', (task_id, 1))
             conn.commit()
             logger.info(f"Task {task_id} deleted successfully")
             return {"status": "success"}

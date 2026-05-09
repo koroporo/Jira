@@ -199,6 +199,7 @@ function renderTable(tasks) {
         const parentId = pick(t, ['parent_task_id', 'ParentTaskID'], null);
         const priority = pick(t, ['task_priority', 'TaskPriority'], 0);
         const assignee = pick(t, ['assignee_name', 'AssigneeName'], 'Unassigned');
+        const reporter = pick(t, ['reporter_name', 'ReporterName'], 'Unknown');
         const status = pick(t, ['status_name', 'StatusName'], 'Unknown');
         const dueDate = formatDate(pick(t, ['due_date', 'DueDate'], null));
         const createdAt = formatDate(pick(t, ['creation_time', 'CreationTime'], null));
@@ -215,6 +216,7 @@ function renderTable(tasks) {
                 <td>${assignee}</td>
                 <td><span class="badge bg-info">${status}</span></td>
                 <td><small>${dueDate}</small></td>
+                <td>${reporter}</td>
                 <td><small>${createdAt}</small></td>
                 <td>
                     <button class="btn btn-sm btn-outline-warning" onclick="editTask(${id})">Edit</button>
@@ -223,6 +225,13 @@ function renderTable(tasks) {
             </tr>
         `;
     }).join('');
+
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        const oldTooltip = bootstrap.Tooltip.getInstance(tooltipTriggerEl);
+        if (oldTooltip) oldTooltip.dispose();
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 }
 
 function applyFilters() {
@@ -259,7 +268,17 @@ function toggleTypeDetail() {
 async function saveTask() {
     const id = document.getElementById('taskId').value;
     const user = JSON.parse(localStorage.getItem('currentUser'));
-
+    const titleVal = document.getElementById('title').value.trim();
+    const projectVal = document.getElementById('projectId').value.trim();
+    // const reporterVal = document.getElementById('reporterId').value;
+    if (!titleVal) {
+        alert("Task title cannot empty!");
+        return;
+    }
+    if (!projectVal) {
+        alert("Project title cannot empty!");
+        return;
+    }
     const data = {
         title: document.getElementById('title').value,
         task_description: document.getElementById('description').value,
@@ -272,7 +291,8 @@ async function saveTask() {
 
         // Foreign Keys
         project_id: parseInt(document.getElementById('projectId').value),
-        reporter_id: parseInt(document.getElementById('reporterId').value) || (user ? user.ProfileID : 1),        assignee_id: parseInt(document.getElementById('assigneeId').value) || null,
+        reporter_id: (user ? user.ProfileID : 1),
+        assignee_id: parseInt(document.getElementById('assigneeId').value) || null,
         milestone_id: parseInt(document.getElementById('milestoneId').value) || null,
         
         // Date field
@@ -297,8 +317,9 @@ async function saveTask() {
             loadTasks();
             loadMilestones();
         } else {
-            const error = await response.json();
-            alert("Error: " + (error.detail || "Validation failed"));
+         const error = await response.json();
+         alert("Error: " + (error.detail || error.message || JSON.stringify(error)));
+
         }
     } catch (err) {
         console.error("Connection error:", err);
